@@ -137,6 +137,20 @@ html,body{min-height:100%;}
 @keyframes battle-flash{0%{opacity:.7}100%{opacity:0}}
 @keyframes heal-glow{50%{filter:drop-shadow(0 0 22px #80ff9c)}}
 @media(prefers-reduced-motion:reduce){#field.battle-impact,#field .spr.attack-lunge,#field .spr.damage-shake,#field .spr.heal-glow,.damage-number{animation:none!important}}
+
+/* 操作系を分離: 十字キーと決定/メニューの誤タップ防止 */
+#world{gap:12px;padding-bottom:16px}
+#pad{grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,49px);gap:7px;margin:0 auto;touch-action:none}
+#pad button{min-height:49px;font-size:22px;border-radius:12px}
+#pad button:nth-child(1){grid-area:1/2}
+#pad button:nth-child(2){grid-area:2/1}
+#pad button:nth-child(3){grid-area:2/3}
+#pad button:nth-child(4){grid-area:3/2}
+#exploreActions{display:flex;justify-content:center;gap:22px;width:100%;margin-top:14px;margin-bottom:14px;flex-shrink:0}
+#exploreActions button{min-width:112px;min-height:48px;border-radius:12px;background:linear-gradient(#263c55,#0e192b)}
+#world~#msg{margin-top:8px}
+#world~#menu:not(:empty){margin-top:20px}
+@media(max-height:700px){#pad{grid-template-rows:repeat(3,43px)}#pad button{min-height:43px}#exploreActions{margin-top:12px;margin-bottom:12px}}
 </style>
 <script>
 window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
@@ -150,7 +164,7 @@ window.addEventListener('unhandledrejection',function(e){var x=document.getEleme
 <h1>王国の灯 <button id="snd" aria-label="おとの オン・オフ">♪</button></h1><div id="audioControls" style="display:flex;gap:8px;align-items:center;justify-content:center;font-size:12px"><button id="testSound" type="button" style="padding:7px 12px;touch-action:manipulation">♪ 音を出す・テスト</button><span id="audioStatus" aria-live="polite">音が出ない時はこちら</span></div>
 <div id="top"></div>
 <div id="field"><div id="foe" class="side"></div><div id="me" class="side"></div></div>
-<div id="world"><canvas id="map" width="270" height="270"></canvas><div id="pad"><button data-d="0,-1" aria-label="上">▲</button><button data-d="-1,0" aria-label="左">◀</button><button data-d="1,0" aria-label="右">▶</button><button data-d="0,1" aria-label="下">▼</button><button id="mbtn">メニュー</button><button id="abtn">決定</button></div></div>
+<div id="world"><canvas id="map" width="270" height="270"></canvas><div id="pad"><button data-d="0,-1" aria-label="上">▲</button><button data-d="-1,0" aria-label="左">◀</button><button data-d="1,0" aria-label="右">▶</button><button data-d="0,1" aria-label="下">▼</button></div><div id="exploreActions"><button id="abtn" type="button">決定</button><button id="mbtn" type="button">メニュー</button></div></div>
 <div id="msg"></div>
 <div id="menu"></div>
 </div>
@@ -574,17 +588,22 @@ else{drawHeroFacing(x,hx,hy,face[0]===1?'right':'left')}
 function drawHeroFacing(ctx,x,y,dir){
  ctx.save();ctx.translate(x,y);
  if(dir==='left'){ctx.translate(32,0);ctx.scale(-1,1)}
- const r=(c,a,b,w,h)=>{ctx.fillStyle=c;ctx.fillRect(a,b,w,h)};
- const outline='#171b29',hair='#493327',blue='#315ec0',shadow='#213b81',skin='#e7b78d',boot='#322c2e';
- r(outline,9,2,15,12);r(hair,10,3,13,10);r('#75503a',12,3,9,3);
+ const R=(c,a,b,w,h)=>{ctx.fillStyle=c;ctx.fillRect(a,b,w,h)};
+ const ink='#1b202e',hair='#6a4a2a',highlight='#97704a',blue='#3a5fd0',cape='#223a8a',steel='#aab8d0',shine='#eef3ff',skin='#e7b78d',boots='#3a2a29',gold='#e6c16b';
+ // 正面グラフィックと同じ髪色・青いマント・銀の肩当て・ブーツ
+ R(ink,9,3,15,11);R(hair,10,3,13,10);R(highlight,12,4,8,2);
  if(dir==='up'){
-  r(outline,8,13,17,13);r(blue,9,14,15,12);r(shadow,10,17,13,9);r('#8db5ea',10,15,12,2);
-  r(outline,7,16,3,9);r(outline,24,16,3,9);r(skin,7,23,3,3);r(skin,24,23,3,3);
-  r(outline,10,26,5,5);r(outline,19,26,5,5);r(boot,11,27,4,3);r(boot,20,27,4,3);
+  R(ink,8,13,17,15);R(steel,8,14,5,5);R(steel,21,14,5,5);
+  R(blue,10,14,13,13);R(cape,11,18,11,10);R('#527ddf',12,15,9,3);
+  R(shine,9,16,2,3);R(shine,23,16,2,3);R(ink,6,19,4,7);R(ink,25,19,3,7);
+  R(skin,7,24,3,3);R(skin,25,24,3,3);
+  R(ink,10,27,6,4);R(ink,19,27,6,4);R(boots,11,28,4,3);R(boots,20,28,4,3);
  }else{
-  r(skin,20,8,5,6);r(outline,24,10,2,2);r(blue,9,14,13,12);r(shadow,7,16,7,12);
-  r('#8db5ea',10,14,10,2);r(outline,17,16,4,10);r(skin,20,22,3,3);
-  r(outline,11,26,5,5);r(outline,20,26,5,5);r(boot,12,27,4,3);r(boot,21,27,4,3);
+  R(skin,21,9,5,6);R(ink,25,11,2,2);R(highlight,22,7,2,2);
+  R(ink,7,14,18,14);R(cape,7,16,13,12);R(blue,10,14,12,12);
+  R(steel,17,14,5,5);R(shine,19,15,2,2);R(gold,18,20,3,2);
+  R(ink,20,20,4,6);R(skin,21,23,3,3);
+  R(ink,10,27,7,4);R(ink,20,27,7,4);R(boots,11,28,5,3);R(boots,21,28,5,3);
  }
  ctx.restore();
 }
