@@ -523,6 +523,43 @@ if(ch=='b'){x.fillStyle='#fff';x.fillRect(X+4,Y+4,22,8)}
 if(ch=='k'){for(let k=0;k<4;k++){x.fillStyle=['#c0402a','#3a7ad0','#e8b030','#4cb84c'][k];x.fillRect(X+3+k*6,Y+6,5,18)}}
 if(ch=='t'){x.fillStyle='#b88a50';x.fillRect(X+2,Y+4,26,12)}
 if(ch=='H'){x.fillStyle='#ffb02e';x.fillRect(X+10,Y+5,10,16);x.fillStyle='#fff0a0';x.fillRect(X+13,Y+11,4,8)}}
+// 地域別の光と陰影。装飾のみで当たり判定やイベントは変更しない。
+function drawAreaAtmosphere(ctx,vx,vy){
+ const c=ctx;
+ const glow=(x,y,color,r)=>{const g=c.createRadialGradient(x,y,1,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)};
+ c.save();
+ if(curMap==='forest'||curMap==='roots'||curMap==='runes'||curMap==='altar'){
+   for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+     const wx=vx+i,wy=vy+j,t=MAP[wy]?.[wx],X=i*T,Y=j*T;
+     if(t==='T'&&((wx*13+wy*17)%5===0)){
+       c.fillStyle='rgba(7,26,20,.28)';c.fillRect(X+2,Y+22,26,7);
+       c.fillStyle='#86ba67';c.fillRect(X+6,Y+6,5,3);c.fillRect(X+20,Y+13,4,3);
+     }
+     if(t!=='T'&&t!=='w'&&((wx*19+wy*23)%13===0)){
+       c.fillStyle='rgba(180,246,161,.7)';c.fillRect(X+13,Y+10,2,2);
+       glow(X+14,Y+11,'rgba(117,242,153,.24)',13);
+     }
+     if(curMap==='altar'&&t==='S')glow(X+15,Y+13,'rgba(255,223,136,.25)',22);
+   }
+ }else if(curMap==='cave'){
+   for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+     const wx=vx+i,wy=vy+j,t=MAP[wy]?.[wx],X=i*T,Y=j*T;
+     if(t==='H'||t==='Q'){
+       glow(X+15,Y+13,'rgba(255,110,35,.42)',35);
+       c.fillStyle='rgba(255,233,164,.8)';c.fillRect(X+13,Y+4,3,5);
+     }else if(t==='L')glow(X+15,Y+15,'rgba(255,96,27,.28)',27);
+     else if(t==='C'&&(wx*7+wy*11)%9===0){c.fillStyle='rgba(243,150,95,.24)';c.fillRect(X+5,Y+22,18,2)}
+   }
+ }else if(curMap==='world'){
+   for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+     const wx=vx+i,wy=vy+j,t=MAP[wy]?.[wx],X=i*T,Y=j*T;
+     if(t==='g'&&(wx*7+wy*3)%6===0){c.fillStyle='#e8d38c';c.fillRect(X+8,Y+13,2,3);c.fillRect(X+20,Y+19,2,3)}
+     if(t==='~'&&(wx+wy)%3===0){c.fillStyle='rgba(236,249,255,.65)';c.fillRect(X+5,Y+8,9,2)}
+   }
+ }
+ c.restore();
+}
+drawAreaAtmosphere(x,vx,vy);
 if(curMap==='runes')SHRINE_SWITCHES.forEach((q,i)=>{const ii=q.x-vx,jj=q.y-vy;if(ii>=0&&jj>=0&&ii<V&&jj<V){x.fillStyle=shrineActivated.includes(i)?'#e9f7a0':'#65e3b3';x.fillRect(ii*T+9,jj*T+6,12,19);x.fillStyle='#173d32';x.fillRect(ii*T+13,jj*T+9,4,10)}});
 if(curMap==='altar'&&!shrineClear){const i=9-vx,j=6-vy;if(i>=0&&j>=0&&i<V&&j<V){x.fillStyle='#d5b869';x.fillRect(i*T+4,j*T+23,23,6);x.drawImage(spr('ユグハッパ'),i*T-2,j*T-10,34,40)}}
 NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
