@@ -227,7 +227,7 @@ const PLAINS=[
 const WORLD=OLDMAP.map((r,i)=>(i==3||i==8?r.slice(0,15)+'.':i==15?'TTTTTTTTTTDTTTTT':r)+PLAINS[i]+EAST[i]).concat(SW.map((r,i)=>r+SE[i]));
 const stamp=(x,y,s)=>{WORLD[y]=WORLD[y].slice(0,x)+s+WORLD[y].slice(x+s.length)};
 stamp(1,3,'RRR');stamp(1,4,'WOW');stamp(9,3,'RRR');stamp(9,4,'WOW');stamp(4,8,'N');
-stamp(25,8,'pppppppppp');stamp(34,7,'C');stamp(34,6,'E'); // 紅蓮岳の洞窟入口
+stamp(25,8,'pppppppppp');stamp(34,7,'C');stamp(34,6,'E');stamp(10,15,'D'); // 紅蓮岳と古代樹の森の入口
 const CAVE=['ZZZZZZZZZZZZZZZZZZZZZ','ZCCCCCCCCCZCCCBBBBBBZ','ZCZZZZZZZCZCZCBCQCQBZ','ZCCCZCCCZCZCZCBCCCCBZ','ZZZCZCZCZCZZZCBCCCQBZ','ZCCCZCZQZCCCCCBCCCCBZ','ZCZZZCZZZZZZZZBCCCBBZ','ZCCCZCCCCCCQZCCCCCCCZ','ZZZCZZZZZZZCZCCCCCZCZ','ZCCQZCCCCCCCZCCCQCZCZ','ZCCCCCZZZZZCZCZCZCZCZ','ZCCCCCZCCCCCZCCCZCZCZ','ZCCCCCZZZZZZZCZCZCZCZ','ZCZCCCZCQCCCCCZCCCZCZ','ZCZZZCZCZZZZZZZCZCZCZ','ZCCCZCZCZCCCZCCCZCZCZ','ZCZCZCZCZZZCZCZCZZZCZ','ZCECCCCCCCCCCCCCCCCCZ','ZZZZZZZZZZZZZZZZZZZZZ'];
 // 第二章: 世界樹の南に広がる古代樹の森
 const FOREST=["TTTTTTTTTTTTTTTTTTTTTTT", "Tgggg...ggg..ggg.....TT", "Tggg....ggg..ggg..H..TT", "Tgg..TTT...pp....gg..TT", "Tg...T.T...pp..TTTg..TT", "T....TTT.g.pp..T.Tg..TT", "T.gg.....g.pp..TTT...TT", "T.gg..TTT..pp..ggg...TT", "T.....T.T..pp..ggg...TT", "T..gg.TTT..pp........TT", "T..gg......pp..TTT...TT", "T...TTT..gpp..T.T...gTT", "T...T.T..gpp..TTT...gTT", "T...TTT...pp......gg.TT", "Tgg.......pp..gg..gg..T", "Tgg..TTT..pp..gg......T", "T....T.T..pp.....TTT..T", "T....TTT..pp.....T.T..T", "T.........pp.....TTT..T", "T...gg....pp....gg....T", "TTTTTTTTTTDDTTTTTTTTTTT"];
@@ -242,9 +242,13 @@ const SHRINE_SWITCHES=[{m:'runes',x:4,y:4},{m:'runes',x:14,y:9},{m:'runes',x:5,y
 const shrineSwitchKey=(x,y)=>x+','+y;
 let shrineActivated=[];
 
+// 森の南門・神殿の北門を歩行可能な入口として整備
+FOREST[19]=FOREST[19].slice(0,11)+'p'+FOREST[19].slice(12);
+FOREST[20]=FOREST[20].slice(0,11)+'D'+FOREST[20].slice(12);
+FOREST[1]=FOREST[1].slice(0,10)+'E'+FOREST[1].slice(11);
 const MAPS={roots:ROOTS,runes:RUNES,altar:ALTAR,world:WORLD,cave:CAVE,forest:FOREST,hero:['wwwwwwwww','wkkffffbw','wffffffbw','wfffffffw','wffttfffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww'],jord:['wwwwwwwww','wkkkkfffw','wfffffffw','wfttffbbw','wfffffffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww']};
 let MAP=WORLD,curMap='world',face=[0,1];
-const DOORS={'world:2,4':['hero',4,7],'hero:4,8':['world',2,5],'world:10,4':['jord',4,7],'jord:4,8':['world',10,5],'world:34,6':['cave',2,16],'cave:2,17':['world',34,7],'world:10,15':['forest',10,19],'forest:10,20':['world',10,14],'forest:11,20':['world',10,14],'forest:10,1':['roots',9,17],'roots:9,17':['forest',10,2],'roots:9,1':['runes',9,17],'runes:9,17':['roots',9,2],'runes:9,1':['altar',9,16],'altar:9,17':['runes',9,2]},EXIT={hero:[2,5],jord:[10,5],cave:[34,7],forest:[10,14],roots:[10,2],runes:[10,2],altar:[10,2]};
+const DOORS={'world:2,4':['hero',4,7],'hero:4,8':['world',2,5],'world:10,4':['jord',4,7],'jord:4,8':['world',10,5],'world:34,6':['cave',2,16],'cave:2,17':['world',34,7],'world:10,15':['forest',11,19],'forest:11,20':['world',10,14],'forest:10,1':['roots',9,17],'roots:9,17':['forest',10,2],'roots:9,1':['runes',9,17],'runes:9,17':['roots',9,2],'runes:9,1':['altar',9,16],'altar:9,17':['runes',9,2]},EXIT={hero:[2,5],jord:[10,5],cave:[34,7],forest:[10,14],roots:[10,2],runes:[10,2],altar:[10,2]};
 const NOTES={},nt=(m,l,v)=>l.forEach(([x,y])=>{NOTES[m+':'+x+','+y]=v});
 nt('hero',[[3,4],[4,4]],['じぶんの 部屋だ。つくえの 上に 古い 日記が ひらいたままだ。','『16年前の ある夜、世界樹の根もとで ひかる赤ん坊を ひろった。この子は…』 そこで ページが やぶれている。']);
 nt('hero',[[7,1],[7,2]],'bed');nt('jord',[[6,3],[7,3]],'bed');
@@ -478,7 +482,7 @@ NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;const i=n.x-vx,j=n.y-vy;if(i<0
 const ox=(px-vx)*T,oy=(py-vy)*T;x.fillStyle='rgba(0,0,0,.25)';x.fillRect(ox+4,oy+28,22,3);const by=oy-(px+py)%2;
 x.drawImage(spr('P:hero'),ox-1,by-3)}
 let AC,mute=false,bgmT=0,curBgm='';
-const AU=()=>{if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state=='suspended')AC.resume();return AC},NF=n=>440*2**((n-69)/12);
+const AU=()=>{if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state=='suspended')AC.resume().catch(()=>{});return AC},NF=n=>440*2**((n-69)/12);
 function tone(f,at,d,type='square',v=.06,f2){const a=AU();if(!a||mute)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,at);if(f2)o.frequency.exponentialRampToValueAtTime(f2,at+d);g.gain.setValueAtTime(v,at);g.gain.exponentialRampToValueAtTime(.0001,at+d);o.connect(g).connect(a.destination);o.start(at);o.stop(at+d+.02)}
 function nz(at,d,v,fc,type='lowpass',f2){const a=AU();if(!a||mute)return;const n=Math.floor(a.sampleRate*d),buf=a.createBuffer(1,n,a.sampleRate),da=buf.getChannelData(0);for(let i=0;i<n;i++)da[i]=Math.random()*2-1;const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=buf;f.type=type;f.frequency.setValueAtTime(fc,at);if(f2)f.frequency.exponentialRampToValueAtTime(f2,at+d);g.gain.setValueAtTime(v,at);g.gain.exponentialRampToValueAtTime(.0001,at+d);s.connect(f).connect(g).connect(a.destination);s.start(at)}
 function se(k,t){const a=AU();if(!a||mute)return;const n=a.currentTime,seq=(L,w,ty,v,d)=>L.forEach((f,i)=>tone(f,n+i*w,d||w*1.5,ty,v)),
@@ -490,9 +494,9 @@ heal:()=>seq([523,659,784,988],.09,'triangle',.07,.2),buy:()=>{tone(988,n,.07,'s
 const TR={field:{bpm:112,l:[72,0,76,0,79,0,76,0,77,0,81,0,79,0,76,0,74,0,77,0,81,0,77,0,76,0,74,0,72,0,0,0],b:[48,0,0,0,48,0,0,0,53,0,0,0,53,0,0,0,55,0,0,0,55,0,0,0,48,0,0,0,43,0,0,0]},
 battle:{bpm:150,l:[69,72,76,72,69,72,76,72,67,71,74,71,67,71,74,71,65,69,72,69,65,69,72,69,64,68,71,68,64,68,71,76],b:[45,0,45,0,45,0,45,0,43,0,43,0,43,0,43,0,41,0,41,0,41,0,41,0,40,0,40,0,40,0,40,0]},
 boss:{bpm:170,l:[62,0,65,0,69,0,68,0,62,0,65,0,70,0,69,0,58,0,62,0,65,0,64,0,57,0,61,0,64,0,65,0],b:[38,38,0,38,38,0,38,0,38,38,0,38,38,0,41,0,34,34,0,34,34,0,34,0,33,33,0,33,33,0,36,0]}};
-function bgm(name){if(curBgm==name)return;curBgm=name;clearInterval(bgmT);if(!name||mute)return;const a=AU();if(!a)return;const T=TR[name],st=60/T.bpm/2;let i=0,t=a.currentTime+.1;bgmT=setInterval(()=>{while(t<a.currentTime+.3){const k=i%32;if(T.l[k])tone(NF(T.l[k]),t,st*.9,'square',.03);if(T.b[k])tone(NF(T.b[k]),t,st*1.8,'triangle',.08);t+=st;i++}},100)}
+function bgm(name){if(curBgm==name&&bgmT)return;curBgm=name;clearInterval(bgmT);bgmT=0;if(!name||mute)return;const a=AU();if(!a)return;const T=TR[name],st=60/T.bpm/2;let i=0,t=a.currentTime+.1;bgmT=setInterval(()=>{while(t<a.currentTime+.3){const k=i%32;if(T.l[k])tone(NF(T.l[k]),t,st*.9,'square',.03);if(T.b[k])tone(NF(T.b[k]),t,st*1.8,'triangle',.08);t+=st;i++}},100)}
 document.addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('#pad button[data-d]'))se('ui')},true);
-$('#snd').onclick=()=>{mute=!mute;$('#snd').textContent=mute?'♪×':'♪';if(mute)clearInterval(bgmT);else{const w=curBgm;curBgm='';bgm(w)}};
+$('#snd').onclick=()=>{AU();mute=!mute;$('#snd').textContent=mute?'♪×':'♪';if(mute){clearInterval(bgmT);bgmT=0}else{const w=curBgm||'field';curBgm='';bgm(w);se('ui')}};
 let gold=0,pot=3,keys=0,bossFoe=null,inBt=0;const KEY='valheim-save1';
 function act(){if(!inMap){const b=$('#menu button');if(b)b.click();return}
 const tx=px+face[0],ty=py+face[1],n=NPCS.find(n=>(n.m||'world')==curMap&&n.x==tx&&n.y==ty);
@@ -570,7 +574,7 @@ const INTRO=[
 {kind:'story',text:'王国の灯を再び輝かせるため、四つの聖域を巡り、守護獣の力を集めよ。\n仲間となる魔物と共に、灯に隠された真実を探す旅が始まる。\nその先で待つのは、世界を凍らせようとする霜王の謎――。'}
 ];
 let introIndex=0;
-function showIntro(){const root=document.getElementById('cinema');if(introIndex>=INTRO.length){root.remove();return}const a=INTRO[introIndex];root.innerHTML='<div class="scene">'+(a.html||'<div class="sub">PROLOGUE · '+(introIndex-1)+'/3</div><div class="story"></div>')+'<button id="introNext">'+(a.button|| (introIndex===INTRO.length-1?'冒険を始める':'次へ'))+'</button></div>';if(a.text)root.querySelector('.story').textContent=a.text;root.querySelector('#introNext').onclick=()=>{introIndex++;showIntro()}}
+function showIntro(){const root=document.getElementById('cinema');if(introIndex>=INTRO.length){root.remove();return}const a=INTRO[introIndex];root.innerHTML='<div class="scene">'+(a.html||'<div class="sub">PROLOGUE · '+(introIndex-1)+'/3</div><div class="story"></div>')+'<button id="introNext">'+(a.button|| (introIndex===INTRO.length-1?'冒険を始める':'次へ'))+'</button></div>';if(a.text)root.querySelector('.story').textContent=a.text;root.querySelector('#introNext').onclick=()=>{AU();se('ui');introIndex++;showIntro();if(introIndex>=INTRO.length){curBgm='';bgm('field')}}}
 showIntro();
 </script>
 </body>
