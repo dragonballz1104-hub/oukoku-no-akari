@@ -117,6 +117,26 @@ html,body{min-height:100%;}
 #foe .spr{transform:translateY(27px)}
 #foe .spr:after{bottom:2%;width:72%;height:10%;background:#0008}
 @media(max-height:690px){#foe .spr{transform:translateY(19px)}}
+
+/* 戦闘演出強化: iPhone Safari対応（CSS animation中心） */
+#field{--battle-flash:transparent}
+#field.battle-impact{animation:battle-shudder .26s ease-out}
+#field.battle-impact:before{content:"";position:absolute;inset:0;background:var(--battle-flash);z-index:3;pointer-events:none;animation:battle-flash .3s ease-out forwards}
+#field .spr.attack-lunge{animation:ally-lunge .36s ease-out!important}
+#foe .spr.attack-lunge{animation:foe-lunge .36s ease-out!important}
+#field .spr.damage-shake{animation:damage-shake .4s ease-in-out!important}
+#field .spr.heal-glow{animation:heal-glow .65s ease-out!important}
+.damage-number{position:fixed;z-index:99999;pointer-events:none;color:#fff3be;font:bold 25px system-ui,sans-serif;-webkit-text-stroke:1px #3a1920;text-shadow:0 2px 2px #000,0 0 9px #ff803a;animation:damage-float .85s ease-out forwards}
+.damage-number.super{color:#ffdb62;font-size:30px;text-shadow:0 0 12px #ff7c27,0 2px 2px #000}
+.damage-number.resist{color:#9ad9ff}
+@keyframes ally-lunge{0%,100%{transform:translate(0,0)}40%{transform:translate(23px,-16px) scale(1.07)}}
+@keyframes foe-lunge{0%,100%{transform:translate(0,0)}40%{transform:translate(-22px,15px) scale(1.08)}}
+@keyframes damage-shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-8px,2px)}50%{transform:translate(8px,-2px)}75%{transform:translate(-5px,2px)}}
+@keyframes damage-float{0%{opacity:0;transform:translate(-50%,5px) scale(.65)}15%{opacity:1;transform:translate(-50%,-12px) scale(1.16)}100%{opacity:0;transform:translate(-50%,-72px) scale(1)}}
+@keyframes battle-shudder{0%,100%{transform:translateX(0)}30%{transform:translateX(-3px)}60%{transform:translateX(3px)}}
+@keyframes battle-flash{0%{opacity:.7}100%{opacity:0}}
+@keyframes heal-glow{50%{filter:drop-shadow(0 0 22px #80ff9c)}}
+@media(prefers-reduced-motion:reduce){#field.battle-impact,#field .spr.attack-lunge,#field .spr.damage-shake,#field .spr.heal-glow,.damage-number{animation:none!important}}
 </style>
 <script>
 window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
@@ -172,9 +192,36 @@ function main(){$('#msg').textContent=`${cur.sp.n}は どうする?`;menu([["た
 function fightMenu(){menu([...moves(cur).map(v=>[`${v[0]}<small>${TN[v[1]]||v[1]} / 威力 ${v[2]}</small>`,()=>fight(v)]),["もどる",main,'wide']])}
 function swapMenu(){const o=party.filter(m=>m!==cur&&m.hp>0);if(!o.length){$('#msg').textContent='ほかに たたかえる なかまがいない!';return}
 menu([...o.map(m=>[`${m.sp.n}<small>${m.hp}/${m.max}</small>`,async()=>{menu([]);cur=m;box(cur,$('#me'));await say(`ゆけっ ${m.sp.n}!`);foeTurn()}]),["もどる",main,'wide']])}
-async function atk(a,d,v){await say(`${nm(a)}の ${v[0]}!`);const e=eff(v[1],d.sp.t)*(d.sp.t2?eff(v[1],d.sp.t2):1),dm=Math.floor(st(a,'a')/st(d,'d')*v[2]*.25*e*(.85+Math.random()*.3))+2;
-d.hp=Math.max(0,d.hp-dm);const el=$(d===foe?'#foe .spr':'#me .spr');fx(v[1],el);se('hit',v[1]);await sleep(380);el.classList.add('hit');bars();await sleep(350);el.classList.remove('hit');
-if(e>1)await say('こうかは ばつぐんだ!');if(e<1)await say('こうかは いまひとつだ…');return d.hp<=0}
+function battleStrike(a,d,damage,mult,type){
+ const src=$(a===foe?'#foe .spr':'#me .spr');
+ const dst=$(d===foe?'#foe .spr':'#me .spr');
+ const field=$('#field');
+ if(!src||!dst)return;
+ src.classList.remove('attack-lunge');dst.classList.remove('damage-shake');
+ void src.offsetWidth;src.classList.add('attack-lunge');
+ setTimeout(()=>{if(!dst.isConnected)return;dst.classList.add('damage-shake');
+  const r=dst.getBoundingClientRect(),n=document.createElement('span');
+  n.className='damage-number'+(mult>1?' super':mult<1?' resist':'');
+  n.textContent='-'+damage;n.style.left=(r.left+r.width*.5)+'px';n.style.top=(r.top+r.height*.35)+'px';
+  document.body.append(n);setTimeout(()=>n.remove(),900);
+  field.style.setProperty('--battle-flash',({fire:'#ff74294d',water:'#5ecbff4d',grass:'#7ee87844',electric:'#ffe86a66',light:'#fff6b477',dark:'#b070f555'}[type]||'#ffffff55'));
+  field.classList.remove('battle-impact');void field.offsetWidth;field.classList.add('battle-impact');
+  setTimeout(()=>{field.classList.remove('battle-impact');dst.classList.remove('damage-shake')},410);
+ },160);
+ setTimeout(()=>src.classList.remove('attack-lunge'),450);
+}
+async function atk(a,d,v){
+ await say(`${nm(a)}の ${v[0]}!`,430);
+ const e=eff(v[1],d.sp.t)*(d.sp.t2?eff(v[1],d.sp.t2):1);
+ const dm=Math.floor(st(a,'a')/st(d,'d')*v[2]*.25*e*(.85+Math.random()*.3))+2;
+ d.hp=Math.max(0,d.hp-dm);
+ const el=$(d===foe?'#foe .spr':'#me .spr');
+ battleStrike(a,d,dm,e,v[1]);fx(v[1],el);se('hit',v[1]);
+ await sleep(390);bars();await sleep(300);
+ if(e>1)await say('こうかは ばつぐんだ!',650);
+ if(e<1)await say('こうかは いまひとつだ…',650);
+ return d.hp<=0;
+}
 async function fight(v){menu([]);const fv=pick(moves(foe));
 for(const w of cur.sp.s>=foe.sp.s*.8?['p','f']:['f','p']){
 if(w=='p'){if(await atk(cur,foe,v))return win()}else{if(await atk(foe,cur,fv))return lose()}}
