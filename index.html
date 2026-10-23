@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>王国の灯 - モンスターバトル</title>
+<style>
+:root{--bg:#e4ead2;--panel:#f5f8e8;--ink:#1d2a1f;--line:#1d2a1f;--acc:#c2412d;--hp:#3a9a3a;--hpl:#d4b020;--hpd:#c2412d;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a2e;--panel:#1f2745;--ink:#e8ecff;--line:#8fa0e0;--acc:#c93c20;--hp:#4cc04c;--hpl:#e0c030;--hpd:#ff6a4a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a2e;--panel:#1f2745;--ink:#e8ecff;--line:#8fa0e0;--acc:#c93c20;--hp:#4cc04c;--hpl:#e0c030;--hpd:#ff6a4a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:'DotGothic16','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif}
+#app{max-width:480px;height:100%;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+h1{font-size:18px;margin:0}
+#top{font-size:13px;border:2px solid var(--line);padding:6px 8px;background:var(--panel)}
+#field{flex:1;display:flex;flex-direction:column;justify-content:space-around;min-height:0}
+.side{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#me{flex-direction:row-reverse}
+.info{flex:1;border:2px solid var(--line);background:var(--panel);padding:8px;font-size:15px;box-shadow:3px 3px 0 var(--line)}
+.bar{height:10px;border:2px solid var(--line);margin:6px 0 3px;background:var(--bg)}
+.bar i{display:block;height:100%;transition:width .4s}
+canvas{image-rendering:pixelated;display:block;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.evo{animation:evo .5s 3}@keyframes evo{50%{filter:brightness(8)}}
+.spr{transition:opacity .5s}
+.hit{animation:hit .3s}
+@keyframes hit{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.hit,.evo,canvas{animation:none}}
+#msg{border:2px solid var(--line);background:var(--panel);padding:10px;min-height:4.6em;font-size:16px;line-height:1.5}
+#menu{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button{font:inherit;font-size:16px;padding:12px 6px;border:2px solid var(--line);background:var(--acc);color:#fff;box-shadow:3px 3px 0 var(--line);touch-action:manipulation}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+button small{display:block;font-size:11px;opacity:.85}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.wide,#menu button:only-child{grid-column:1/-1}
+.wide{background:var(--panel);color:var(--ink)}
+#world{flex:1;display:none;flex-direction:column;align-items:center;justify-content:space-around;min-height:0}
+#map{animation:none;max-width:100%;height:auto;border:2px solid var(--line)}
+#pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,48px);gap:6px}
+#pad button{padding:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#pad button:nth-child(5){grid-area:1/3;font-size:12px}#pad button:nth-child(6){grid-area:1/1;font-size:12px}
+h1{display:flex;justify-content:space-between;align-items:center}#snd{padding:2px 10px;font-size:13px}
+#msg{white-space:pre-line}#menu{max-height:38vh;overflow-y:auto}
+#pad button:nth-child(1){grid-area:1/2}#pad button:nth-child(2){grid-area:2/1}#pad button:nth-child(3){grid-area:2/3}#pad button:nth-child(4){grid-area:2/2}
+#cinema{position:fixed;inset:0;z-index:50;background:radial-gradient(ellipse at 50% 65%,#182d3d 0%,#080b18 70%);color:#f8e9bd;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;overflow:hidden}
+#cinema:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#ffffff05 4px 5px);pointer-events:none}
+#cinema .scene{width:min(440px,100%);animation:appear .8s ease both;position:relative}
+#cinema .studio{font:700 clamp(27px,8vw,44px) Georgia,serif;letter-spacing:.13em;color:#fff5d2;text-shadow:0 0 12px #e5b65e,0 0 35px #c88c34}
+#cinema .logo{font-size:clamp(48px,14vw,76px);font-weight:bold;letter-spacing:.12em;color:#fff1bd;text-shadow:0 3px #805525,0 0 25px #d58d32}
+#cinema .sub{color:#a6b9cb;letter-spacing:.24em;font-size:12px;margin:18px 0}
+#cinema .story{font-size:16px;line-height:2.1;text-align:left;white-space:pre-line;min-height:180px}
+#cinema button{background:linear-gradient(#b98740,#6b4022);border:1px solid #e7c47b;color:#fff8dc;box-shadow:0 0 15px #c9974533;margin-top:25px;min-width:160px}
+@keyframes appear{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#cinema .scene{animation:none}}
+#menu.dex-gallery{grid-template-columns:repeat(2,minmax(0,1fr));max-height:48vh;gap:7px}#menu .dex-card{background:var(--panel);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;padding:7px 2px;font-size:12px}#menu .dex-card strong{font-size:12px;overflow-wrap:anywhere}#menu .dex-card small{font-size:11px}#menu .dex-sprite{animation:none;max-width:90px;max-height:90px}#menu .dex-evolution{grid-column:1/-1;display:flex;gap:3px;overflow-x:auto;align-items:center;justify-content:flex-start;padding:8px 3px;background:var(--panel);border:2px solid var(--line)}.dex-stage{flex:1;min-width:82px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:11px;text-align:center}.dex-stage canvas{animation:none;max-width:100%;height:auto}.dex-stage small{font-size:10px}#msg{max-height:24vh;overflow-y:auto}
+
+/* 王国の灯 HD-2D風バトル＆UI */
+:root{--bg:#080e19;--panel:#0a101c;--ink:#f7efd8;--line:#bd8b44;--acc:#172c47;--hp:#49c9a0;--hpl:#d6aa3b;--hpd:#e95a50;color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#080e19;--panel:#0a101c;--ink:#f7efd8;--line:#bd8b44;--acc:#172c47;--hp:#49c9a0;--hpl:#d6aa3b;--hpd:#e95a50}}
+html,body{background:radial-gradient(ellipse at 50% 10%,#26344b,#060b14 70%);color:#f7efd8}
+#app{max-width:620px;padding:8px;gap:7px}
+h1{color:#ffe5a2;text-shadow:0 0 12px #ed9d35;font-size:21px;letter-spacing:.08em}
+#top,#msg,.info{border:2px solid #c69a55;background:linear-gradient(145deg,#111a2bea,#030810f5);color:#f8f0d9;box-shadow:inset 0 0 0 1px #55402a,0 3px 12px #0009;border-radius:4px}
+#top{font-size:11px;padding:7px}
+#field{position:relative;isolation:isolate;min-height:260px;overflow:hidden;flex:1.5;justify-content:space-between;border:3px ridge #b78b4a;border-radius:5px;background-color:#4b6652;background-position:center;background-size:cover;box-shadow:inset 0 0 45px #0007,0 0 20px #0009}
+#field:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#0002 0%,transparent 45%,#05070866 100%);pointer-events:none}
+#field .side{position:absolute;display:flex;gap:0;align-items:center;justify-content:center}
+#foe{right:1%;top:7%;width:60%;height:58%;flex-direction:column-reverse}
+#me{left:0;bottom:0;width:57%;height:56%;flex-direction:column-reverse}
+#field .spr{position:relative;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 12px 5px #0009)}
+#field .spr:after{content:'';position:absolute;bottom:5%;width:64%;height:12%;background:#0006;border-radius:50%;z-index:-1;filter:blur(5px)}
+#foe .spr canvas{width:clamp(128px,36vw,202px)!important;height:clamp(128px,36vw,202px)!important;max-width:100%}
+#me .spr canvas{width:clamp(94px,28vw,145px)!important;height:clamp(94px,28vw,145px)!important;max-width:100%;transform:scaleX(-1) rotate(-3deg);filter:brightness(.88)}
+/* 味方モンスターは常に相手の方向を向き、回転・上下動しない */
+#me .spr canvas{animation:none!important;transform:scaleX(-1)!important;transform-origin:center center}
+#field .info{position:absolute;z-index:2;font-size:11px;padding:5px 7px;line-height:1.25;min-width:130px;max-width:100%;box-shadow:0 2px 6px #0009}
+#foe .info{top:0;right:0}#me .info{bottom:0;left:0}
+#field .info b{color:#ffe3a0}.bar{height:8px;margin:4px 0 2px;background:#24272b;border:1px solid #9b865f}
+#msg{font-size:14px;min-height:3.7em;padding:9px;line-height:1.55}
+#menu{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:31vh}
+button{background:linear-gradient(#213b57,#09172a);border:1px solid #c19a60;border-radius:3px;box-shadow:inset 0 0 0 1px #263c52,2px 2px 0 #05080e;color:#f8efd9;text-shadow:0 1px 2px #000;font-size:14px;padding:9px 5px}
+button:active{background:#32597c}button:focus-visible{outline:2px solid #75d8ff}
+button small{font-size:11px;color:#f0c97f}
+.wide{background:linear-gradient(#313b45,#121922);color:#f9efd9}
+#world{background:radial-gradient(ellipse at center,#263d2c,#0c1420);border:2px solid #b78b4a;border-radius:4px;padding:5px}
+#map{border:3px ridge #c69a55;box-shadow:0 0 18px #000b;width:min(100%,380px);height:auto}
+#pad{grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,42px);gap:4px}
+#pad button{background:linear-gradient(#354862,#152239)}
+#cinema{background:radial-gradient(ellipse at 50% 65%,#28485b 0%,#071126 60%,#02040a 100%)}
+#cinema .logo{color:#ffe3a1;text-shadow:0 3px #804015,0 0 35px #ff8d22,0 0 70px #bd4d1c}
+#menu.dex-gallery{max-height:43vh}#menu .dex-card{background:linear-gradient(#142338,#080e18);color:#f6e8ca}
+#menu .dex-evolution{background:#0b1524}
+@media(max-height:690px){#field{min-height:190px}#foe .spr canvas{width:125px!important;height:125px!important}#me .spr canvas{width:98px!important;height:98px!important}#menu{max-height:27vh}#msg{min-height:2.8em}}
+
+/* 操作パッドとメッセージ欄の重なり防止：画面が低い端末では縦スクロール */
+html,body{min-height:100%;}
+#app{height:100dvh;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;}
+#world{flex:1 0 auto;min-height:0;justify-content:flex-start;gap:12px;padding:8px 5px 12px;}
+#map{flex-shrink:0;width:min(100%,380px);max-height:none;}
+#pad{flex-shrink:0;margin:0 auto 4px;position:relative;z-index:1;}
+#msg{flex-shrink:0;position:relative;z-index:0;overflow-wrap:anywhere;}
+#menu{flex-shrink:0;}
+@media(max-height:780px){#map{width:min(100%,300px)}#world{gap:9px}}
+@media(max-height:650px){#map{width:min(100%,250px)}#world{gap:8px}#pad{grid-template-rows:repeat(2,40px)}}
+
+/* Battle depth: foreground allies, distant enemies */
+#foe{right:1%;top:4%;width:50%;height:51%}
+#me{left:0;bottom:0;width:67%;height:63%}
+#foe .spr canvas{width:clamp(96px,27vw,148px)!important;height:clamp(96px,27vw,148px)!important}
+#me .spr canvas{width:clamp(136px,40vw,195px)!important;height:clamp(136px,40vw,195px)!important;animation:none!important;transform:scaleX(-1)!important}
+#foe .spr{filter:brightness(.96)}
+#me .spr{filter:drop-shadow(0 10px 7px rgba(0,0,0,.6))}
+@media(max-height:690px){#foe .spr canvas{width:110px!important;height:110px!important}#me .spr canvas{width:142px!important;height:142px!important}}
+/* 2026-10-23: 味方はdraw()内で既に右向き反転済み。CSSの二重反転を解除 */
+#me .spr canvas{transform:none!important;animation:none!important;transform-origin:center center}
+/* 敵の足元を地面に近づける（HP欄は動かさない） */
+#foe .spr{transform:translateY(27px)}
+#foe .spr:after{bottom:2%;width:72%;height:10%;background:#0008}
+@media(max-height:690px){#foe .spr{transform:translateY(19px)}}
+</style>
+<script>
+window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
+window.addEventListener('unhandledrejection',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='処理エラー: '+String(e.reason||'不明');}});
+</script>
+</head>
+<body>
+<div id="gameError" style="display:none;position:fixed;z-index:999999;bottom:0;left:0;right:0;background:#521b20;color:white;padding:12px;font:14px sans-serif;overflow-wrap:anywhere"></div>
+<div id="cinema" aria-live="polite"></div>
+<div id="app">
+<h1>王国の灯 <button id="snd" aria-label="おとの オン・オフ">♪</button></h1>
+<div id="top"></div>
+<div id="field"><div id="foe" class="side"></div><div id="me" class="side"></div></div>
+<div id="world"><canvas id="map" width="270" height="270"></canvas><div id="pad"><button data-d="0,-1" aria-label="上">▲</button><button data-d="-1,0" aria-label="左">◀</button><button data-d="1,0" aria-label="右">▶</button><button data-d="0,1" aria-label="下">▼</button><button id="mbtn">メニュー</button><button id="abtn">決定</button></div></div>
+<div id="msg"></div>
+<div id="menu"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),sleep=ms=>new Promise(r=>setTimeout(r,ms)),pick=a=>a[Math.floor(Math.random()*a.length)];
+const ART={
+"ヒノコン":{c:{a:"#d8432a",b:"#ffb02e",d:"#9c2a1a",h:"#fff0a0",e:"#fff36b"},r:["k.....bb","kk...bbb","kak.kkbb","kaakaaab","kaaaaaaa",".kaeekaa",".kaaaaaa",".kaaakkk",".kaaakwk","kkabbbbb","kaadbbbb","kaadbbbb",".kadbbbb",".kaaabbb",".kkaakkk","..kk.kkk"]},
+"ミズクル":{c:{a:"#2f7be0",b:"#a9e0ff",d:"#1e4fa0",h:"#ffffff",e:"#7dfcff"},r:["kk......","kbk.....","kbbk.kkk",".kbakaaa",".kaaaaaa",".kaeekaa",".kaaaaaa",".kaaakkk","..kaaaaa",".kaabbbb","kaadbbbb","kbadbbbb","kbkdbbbb",".kkaaabb","...kkaaa","....kkkk"]},
+"ハッパ":{c:{a:"#3fa84a",b:"#cfeea0",c:"#1f7a35",d:"#2a7a38",h:"#ff7ab8",e:"#ffe45c"},r:["c...c.cc","cc.ccccc",".cccchcc",".kkkkkkk","kaaaaaaa","kaeekaaa","kaaaaaaa",".kaaakkk",".kaaaaaa","kcabbbbb","kccdbbbb",".kcdbbbb",".kaabbbb",".kaaabbb",".kkaakkk","..kk.kkk"]},
+"ビリット":{c:{a:"#f0c020",b:"#fff2a0",d:"#b8860b",h:"#ffffff",e:"#5be0ff"},r:["kb....k.","kbk..kbk",".kbkkbbk",".kkaaaaa",".kaaaaaa",".kaeekaa",".kaaaaaa",".kaaakkk","..kaaaaa",".kabbbbb","kaadbbbb","kbadbbbb",".kaadbbb",".kaaabbb",".kkaakkk","..kkk..."]}
+};
+const TN={fire:"ほのお",water:"みず",grass:"くさ",normal:"ノーマル",light:"ひかり",dark:"やみ"};
+const ST={fire:["grass"],water:["fire"],grass:["water"],normal:[],light:["dark"],dark:["light"]};
+const eff=(a,d)=>ST[a].includes(d)?2:ST[d].includes(a)?.5:1;
+const SP=[
+{n:"ヒノコン",t:"fire",hp:44,a:12,d:9,s:10,c:{a:"#e8542c",b:"#ffc83d"},top:["....bb",".....b","..kkkk"],mv:[["たいあたり","normal",40],["ひのこ","fire",50],["ひっかく","normal",35],["ほのおのうず","fire",65]]},
+{n:"ミズクル",t:"water",hp:50,a:10,d:11,s:8,c:{a:"#3d8bff",b:"#bfe3ff"},top:["kk....","kak...",".kaaaa"],mv:[["たいあたり","normal",40],["みずでっぽう","water",50],["ひっかく","normal",35],["なみのり","water",65]]},
+{n:"ハッパ",t:"grass",hp:48,a:11,d:10,s:9,c:{a:"#4cb84c",b:"#d9f0a0",c:"#2e8b2e"},top:["....cc","...ccc","..kkkk"],mv:[["たいあたり","normal",40],["はっぱカッター","grass",50],["ひっかく","normal",35],["つるのムチ","grass",65]]},
+{n:"ビリット",t:"electric",hp:40,a:12,d:8,s:13,c:{a:"#f2c230",b:"#fff3a0"},top:["k....k","kk..kk",".kaaaa"],mv:[["たいあたり","normal",40],["でんきショック","electric",50],["ひっかく","normal",35],["かみなり","electric",65]]}
+];
+const ART2={
+"ヒノコン":{c:{a:"#8a2a1f",b:"#ff7a1a",d:"#4a1210",h:"#ffd070",e:"#ffe14a"},r:["k.......bb","kk.....bbb","kak..kkbbb","kaakkkabbb",".kaaaaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","..kaaakwkk","kkkaaaaaaa","kbkkabbbbb","kbbkdabbbb","kbbbkdabbb",".kbbkdabbb","..kbkdaabb","...kkdaabb","....kaaabb","....kkaakk",".....kkkkk"]},
+"ミズクル":{c:{a:"#245a9e",b:"#6fd0ff",d:"#12305f",h:"#e8ffff",e:"#aaffff"},r:["........kk","k.......kb","kk.....kbb","kbk...kbbb","kbbkkkkabb",".kbkaaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","..kkaaaaaa",".kbkdaabbb","kbbkdaabbb","kbbkdaabbb",".kbkdaabbb","..kkdaabbb","...kdaaabb","...kkdaabb","....kkaaak","......kkkk"]},
+"ハッパ":{c:{a:"#2f6b3a",b:"#9ddf5a",c:"#4aa84a",d:"#1b4025",h:"#ff6aa8",e:"#fff06a"},r:["c...c....c","cc.cc...cc",".kcck.kccc",".kkckkkkcc","kaaaaaaaaa","kaaaaaaaaa","kaaeekaaaa",".kaaaaaaaa",".kaaakkkkk",".kdaaaaaaa","kccdbbbbbb","kcchdbbbbb","kccdbbbbbb",".kcddbbbbb",".kcdddabbb","..kdaaabbb","..kdaaaabb","..kkaaaabb","...kkaakkk","....kkkkkk"]},
+"ビリット":{c:{a:"#5a3fa0",b:"#ffe34a",d:"#33226b",h:"#ffffff",e:"#6ff0ff"},r:["k.......kb","kk.....kbb","kbk...kbbh",".kbkkaabbb",".kkaaaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","..kkaaaaaa","kbkkdaabbb","kbbkdaabbh","kbbbkdaabb","kkbbkdaabb",".kkbkdaabb","..kkkdaabb","....kdaaab","....kkaaab",".....kkaak","......kkkk"]}
+};
+let party=[],cur,foe,balls=5;
+const TEST=location.hash=='#test',TEST20=location.hash=='#test20';
+const mk=(sp,lv=5)=>{const max=Math.round(sp.hp*(1+(lv-5)*.12));return{sp,lv,xp:0,hp:max,max}},st=(m,k)=>m.sp[k]*(1+(m.lv-5)*.12);
+const nm=m=>m===foe?(m.boss?'':'やせいの')+m.sp.n:m.sp.n;
+function drawOld(sp,s=6){const A=ART2[sp.n],c=document.createElement('canvas');c.width=20*s;c.height=20*s;c.style.filter=`drop-shadow(0 0 7px ${A.c.b}) drop-shadow(0 0 2px ${A.c.e})`;const x=c.getContext('2d');
+A.r.forEach((r,y)=>{[...(r+[...r].reverse().join(''))].forEach((ch,i)=>{if(ch=='.')return;x.fillStyle=ch=='k'?'#1a1a24':ch=='w'?'#fff':A.c[ch];x.fillRect(i*s,y*s,s,s)})});return c}
+function box(m,el){el.innerHTML=`<div class="info"><b>${m.sp.n}</b> Lv${m.lv} <small>${TN[m.sp.t]}${m.sp.t2?'/'+TN[m.sp.t2]:''}</small><div class="bar"><i></i></div><small class="hpt"></small></div><div class="spr"></div>`;el.querySelector('.spr').append(draw(m.sp,128,el.id=='me'));bars()}
+function bars(){[[foe,'#foe'],[cur,'#me']].forEach(([m,id])=>{if(!m||!$(id+' .bar'))return;const i=$(id+' .bar i'),p=m.hp/m.max;i.style.width=p*100+'%';i.style.background=p>.5?'var(--hp)':p>.2?'var(--hpl)':'var(--hpd)';$(id+' .hpt').textContent=m.hp+'/'+m.max})}
+function info(){$('#top').textContent=`なかま ${party.length}/${PARTY_MAX}: ${party.map(m=>m.sp.n).join('、')||'なし'}　牧場 ${storage.length}体　${gold}G`}
+async function say(t,ms=800){$('#msg').textContent=t;await sleep(ms)}
+function menu(a){const m=$('#menu');m.classList.remove('dex-gallery');m.innerHTML='';a.forEach(([l,f,c])=>{const b=document.createElement('button');b.innerHTML=l;if(c)b.className=c;b.onclick=f;m.append(b)})}
+function main(){$('#msg').textContent=`${cur.sp.n}は どうする?`;menu([["たたかう",fightMenu],["いれかえ",swapMenu],["にげる",run]])}
+function fightMenu(){menu([...moves(cur).map(v=>[`${v[0]}<small>${TN[v[1]]||v[1]} / 威力 ${v[2]}</small>`,()=>fight(v)]),["もどる",main,'wide']])}
+function swapMenu(){const o=party.filter(m=>m!==cur&&m.hp>0);if(!o.length){$('#msg').textContent='ほかに たたかえる なかまがいない!';return}
+menu([...o.map(m=>[`${m.sp.n}<small>${m.hp}/${m.max}</small>`,async()=>{menu([]);cur=m;box(cur,$('#me'));await say(`ゆけっ ${m.sp.n}!`);foeTurn()}]),["もどる",main,'wide']])}
+async function atk(a,d,v){await say(`${nm(a)}の ${v[0]}!`);const e=eff(v[1],d.sp.t)*(d.sp.t2?eff(v[1],d.sp.t2):1),dm=Math.floor(st(a,'a')/st(d,'d')*v[2]*.25*e*(.85+Math.random()*.3))+2;
+d.hp=Math.max(0,d.hp-dm);const el=$(d===foe?'#foe .spr':'#me .spr');fx(v[1],el);se('hit',v[1]);await sleep(380);el.classList.add('hit');bars();await sleep(350);el.classList.remove('hit');
+if(e>1)await say('こうかは ばつぐんだ!');if(e<1)await say('こうかは いまひとつだ…');return d.hp<=0}
+async function fight(v){menu([]);const fv=pick(moves(foe));
+for(const w of cur.sp.s>=foe.sp.s*.8?['p','f']:['f','p']){
+if(w=='p'){if(await atk(cur,foe,v))return win()}else{if(await atk(foe,cur,fv))return lose()}}
+main()}
+async function foeTurn(){if(await atk(foe,cur,pick(moves(foe))))return lose();main()}
+// レベルに応じて技を習得。個体ごとに技を保存し、進化しても引き継ぐ。
+const LEARN={fire:[[8,'かえんのキバ',65],[14,'フレイムバースト',80],[22,'ごくえんのいぶき',105]],water:[[8,'アクアテール',65],[14,'げきりゅう',80],[22,'しんかいのほうこう',105]],grass:[[8,'どくのつる',65],[14,'もりのいぶき',80],[22,'せいれいのちから',105]],electric:[[8,'スパーク',65],[14,'らいげき',80],[22,'てんらい',105]],normal:[[8,'れんぞくアタック',60],[14,'パワークラッシュ',80],[22,'メテオインパクト',105]]};
+function moves(m){return m.learned||m.sp.mv}
+function teach(m){const l=LEARN[m.sp.t]||LEARN.normal;return l.filter(([lv])=>m.lv>=lv).reduce((a,[lv,n,p])=>{if(!a.some(v=>v[0]===n)){a.push([n,m.sp.t,p]);/* 技数は無制限 */}return a},[...m.sp.mv])}
+async function learnOnLevel(m){const next=teach(m),old=m.learned||m.sp.mv;for(const v of next){if(!old.some(w=>w[0]===v[0])){se('lvup');await say(`${m.sp.n}は 新しい技「${v[0]}」を おぼえた! (威力 ${v[2]})`,1350)}}m.learned=next}
+async function gain(m,n){n*=5;m.xp+=n;await say(`${m.sp.n}は けいけんち ${n} を えた!`);
+while(m.xp>=m.lv*10){m.xp-=m.lv*10;m.lv++;const o=m.max;m.max=Math.round(m.sp.hp*(1+(m.lv-5)*.12));m.hp+=m.max-o;box(m,$('#me'));se('lvup');await say(`${m.sp.n}は レベル ${m.lv} に あがった!`,1100);if(EVO[m.sp.n]&&m.lv>=(EVO[m.sp.n].lv||12))await evolve(m);await learnOnLevel(m)}}
+async function recruit(){markDex(foe.sp.n,true);const ally=mk(foe.sp,foe.lv);ally.learned=teach(ally);if(party.length>=PARTY_MAX){storage.push(ally);await say(`${foe.sp.n}は 牧場で まつことになった!`,1100)}else{party.push(ally);await say(`${foe.sp.n}が なかまに なった!`,1100)}info();save();goMap()}
+async function win(){if(foe.boss)return foe.sp.n===SHRINE_BOSS.n?shrineBossWin():bossWin();bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*8*(isRare(foe.sp)?3:1));gold+=foe.lv*10;cur.hp=Math.min(cur.max,cur.hp+12);bars();info();const dp=Math.random()<.3;if(dp)pot++;await say(`${foe.lv*10}G${dp?'と きずぐすり 1こ':''}を てにいれた!`,1000);save();if(Math.random()<(isRare(foe.sp)?.14:.38)){se('catch');$('#msg').textContent=`${foe.sp.n}は 仲間になりたそうに こちらを見ている!\nなかまに しますか?`;menu([["YES / なかまにする",recruit],["NO / 見送る",goMap]])}else menu([["たびを つづける",goMap]])}
+async function lose(){se('lose');await say(`${cur.sp.n}は たおれた!`);const n=party.find(m=>m.hp>0);
+if(n){cur=n;box(cur,$('#me'));await say(`ゆけっ ${n.sp.n}!`);return main()}
+await say('めのまえが まっくらになった…',1200);party.forEach(m=>m.hp=m.max);menu([["たびを つづける",goMap]])}
+async function run(){if(foe.boss){$('#msg').textContent='魔竜からは にげられない!';return}menu([]);if(Math.random()<.7){await say('うまく にげきれた!');goMap()}else{await say('にげられない!');foeTurn()}}
+
+function paintBattleScene(){
+ const c=document.createElement('canvas');c.width=480;c.height=320;const g=c.getContext('2d');
+ const cave=curMap==='cave',volcano=cave||px>=30;
+ const sky=g.createLinearGradient(0,0,0,320);
+ if(cave){sky.addColorStop(0,'#130b1a');sky.addColorStop(.55,'#5e1d17');sky.addColorStop(1,'#2a1717')}
+ else if(volcano){sky.addColorStop(0,'#28354c');sky.addColorStop(.5,'#b66a3e');sky.addColorStop(1,'#5a4333')}
+ else{sky.addColorStop(0,'#598fc0');sky.addColorStop(.56,'#d0d9bf');sky.addColorStop(1,'#779b60')}
+ g.fillStyle=sky;g.fillRect(0,0,480,320);
+ const poly=(pts,color)=>{g.fillStyle=color;g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()};
+ if(!cave){for(let i=0;i<11;i++){let x=i*58-60,y=100+(i*17%45);poly([[x-50,195],[x+36,y],[x+112,195]],volcano?'#5d4849':'#6a7e80');poly([[x+10,y+30],[x+36,y],[x+55,y+29]],volcano?'#b59b83':'#c7d2d2')}}
+ else{for(let i=0;i<14;i++){let x=i*41-35,h=35+(i*37%95);poly([[x,180],[x+17,180-h],[x+49,180]],i%2?'#231722':'#3e2020')}}
+ poly([[0,183],[100,163],[190,178],[295,152],[480,183],[480,320],[0,320]],cave?'#40241f':volcano?'#76513d':'#6c9658');
+ poly([[0,228],[140,201],[260,219],[390,195],[480,221],[480,320],[0,320]],cave?'#5d3025':volcano?'#916244':'#a2a276');
+ poly([[0,282],[110,250],[210,261],[310,240],[480,270],[480,320],[0,320]],cave?'#3b2825':volcano?'#75503a':'#6d8757');
+ for(let i=0;i<220;i++){let x=(i*137+23)%480,y=180+(i*73%140),w=2+i%6;g.fillStyle=cave?['#8a4a32','#cb6d27','#3b2424'][i%3]:volcano?['#bc9970','#6d5547','#bcb1a0'][i%3]:['#427345','#d5bc7d','#e6dfba','#55743a'][i%4];g.fillRect(x,y,w,1+i%3)}
+ if(cave){for(let i=0;i<8;i++){let x=i*69+15;g.fillStyle='#f87523';g.fillRect(x,152+i%3*8,3,10);g.fillStyle='#ffdf66';g.fillRect(x,149+i%3*8,2,5)}}
+ g.fillStyle='#00000036';g.beginPath();g.ellipse(344,216,100,14,0,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(92,281,80,13,0,0,Math.PI*2);g.fill();
+ $('#field').style.backgroundImage='url('+c.toDataURL('image/png')+')';
+}
+
+function battle(){paintBattleScene();if(inBt)return;inBt=1;show(false);foe=bossFoe||wildMonster(areaLv(px,py));bossFoe=null;if(!foe.boss)markDex(foe.sp.n);bgm(foe.boss?'boss':'battle');cur=party.find(m=>m.hp>0)||party[0];box(foe,$('#foe'));box(cur,$('#me'));info();$('#msg').textContent=`${isRare(foe.sp)?'★レア! ':''}${foe.boss?'':'やせいの '}${foe.sp.n}が あらわれた!`;main()}
+const OLDMAP=["TTTTTTTTTTTTTTTT","T..gggg....~~~.T","T..gggg....~~~.T","T...pp.......~.T","T.T.pp.TT..gg..T","T...pppp...gg..T","T..ggpHp.......T","T..ggpppp..TT..T","T.....pp.......T","T.gggg.pp.ggg..T","T.gggg..p.ggg..T","T.gggg..pp.....T","T......~~pp..T.T","T.TT...~~.p....T","T......~~.pgg..T","TTTTTTTTTTTTTTTT"];
+const EAST0=['TTTTTTTTTTTTTTTT','..ggg....MMM...T','..ggg....MMMM..T','pppp.......MM..T','..pp...~~~~.gg.T','...p..~~~~~~.g.T','...p..~~~~~~...T','..pp..~~~~~...TT','pppp...~~~.gg..T','..p..gggg......T','..p..gggg..H...T','..pp.ggg...pp..T','...p.......p..MT','...ppppppppp..MT','TT..........MMTT','TTTTTpppTTTTTTTT'],
+SW=['T......gg.p....T','T.TT...gg.pp...T','T.TT......pp...T','T..ggg.TT..p...T','T..ggg....pp....','T..ggg...pp.....','T.....ggg.p....T','T..TT.ggg.p.H..T','T..TT......p...T','T..gggg....p...T','T..gggg..~~pp..T','T.......~~~p...T','T..TT...~~.pp..T','T..TT......pp..T','T..............T','TTTTTTTTTTTTTTTT'],
+SE=['MMM..ppp...MMMMT','MM..gggpp..gg.MT','M..gggg.p..gggMT','...gggg.pp.ggg.T','pppp...pp......T','pp..SSS.p......T','....SSSSp.MM...T','...ggSSSp.MM...T','..gggg..p...H..T','..gggg..pp.....T','...gg...p..MMM.T','.....ggpp..MMM.T','....gggp.......T','....gggp..ggg..T','...............T','TTTTTTTTTTTTTTTT'];
+const EAST=['MMMMMMMMMMMMMMMM','AAGGGAAMMMAAAAAM','AAGGGAAMMLLLLAAM','pppAAAAALLLLLLAM','AAppAAALLCCCCLLM','AAApAAALCCCCCLAM','AAApAAALCCCCCLAM','AAppAAALLCCCLLAM','ppppAAAALLCCLLAM','pAAAAGGGAAppAAAM','ppppppppppppAAAM','AGGAAAAAAHAAAGAM','AAAAAAAAAAAAAGGM','AALLAAAAAAAAAGGM','AALLAAAAAAMMMMMM','MMMMMDDDMMMMMMMM'];
+// 村と火山の間に8マス幅の独立した平原地帯を挿入
+const PLAINS=[
+'pppppppp','..gggg..','..gggg..','pppppppp','..gggg..','..g..g..','..g..g..','pppppppp',
+'pppppppp','..gggg..','..gggg..','pppppppp','...gg...','...gg...','pppppppp','TTTppTTT'];
+const WORLD=OLDMAP.map((r,i)=>(i==3||i==8?r.slice(0,15)+'.':i==15?'TTTTTTTTTTDTTTTT':r)+PLAINS[i]+EAST[i]).concat(SW.map((r,i)=>r+SE[i]));
+const stamp=(x,y,s)=>{WORLD[y]=WORLD[y].slice(0,x)+s+WORLD[y].slice(x+s.length)};
+stamp(1,3,'RRR');stamp(1,4,'WOW');stamp(9,3,'RRR');stamp(9,4,'WOW');stamp(4,8,'N');
+stamp(25,8,'pppppppppp');stamp(34,7,'C');stamp(34,6,'E'); // 紅蓮岳の洞窟入口
+const CAVE=['ZZZZZZZZZZZZZZZZZZZZZ','ZCCCCCCCCCZCCCBBBBBBZ','ZCZZZZZZZCZCZCBCQCQBZ','ZCCCZCCCZCZCZCBCCCCBZ','ZZZCZCZCZCZZZCBCCCQBZ','ZCCCZCZQZCCCCCBCCCCBZ','ZCZZZCZZZZZZZZBCCCBBZ','ZCCCZCCCCCCQZCCCCCCCZ','ZZZCZZZZZZZCZCCCCCZCZ','ZCCQZCCCCCCCZCCCQCZCZ','ZCCCCCZZZZZCZCZCZCZCZ','ZCCCCCZCCCCCZCCCZCZCZ','ZCCCCCZZZZZZZCZCZCZCZ','ZCZCCCZCQCCCCCZCCCZCZ','ZCZZZCZCZZZZZZZCZCZCZ','ZCCCZCZCZCCCZCCCZCZCZ','ZCZCZCZCZZZCZCZCZZZCZ','ZCECCCCCCCCCCCCCCCCCZ','ZZZZZZZZZZZZZZZZZZZZZ'];
+// 第二章: 世界樹の南に広がる古代樹の森
+const FOREST=["TTTTTTTTTTTTTTTTTTTTTTT", "Tgggg...ggg..ggg.....TT", "Tggg....ggg..ggg..H..TT", "Tgg..TTT...pp....gg..TT", "Tg...T.T...pp..TTTg..TT", "T....TTT.g.pp..T.Tg..TT", "T.gg.....g.pp..TTT...TT", "T.gg..TTT..pp..ggg...TT", "T.....T.T..pp..ggg...TT", "T..gg.TTT..pp........TT", "T..gg......pp..TTT...TT", "T...TTT..gpp..T.T...gTT", "T...T.T..gpp..TTT...gTT", "T...TTT...pp......gg.TT", "Tgg.......pp..gg..gg..T", "Tgg..TTT..pp..gg......T", "T....T.T..pp.....TTT..T", "T....TTT..pp.....T.T..T", "T.........pp.....TTT..T", "T...gg....pp....gg....T", "TTTTTTTTTTDDTTTTTTTTTTT"];
+
+// 第二章・世界樹の神殿：三層の迷宮、ルーンと翠樹王
+function shrineMaze(seed){const w=19,h=19,a=Array.from({length:h},()=>Array(w).fill('T'));let x=9,y=17;const visited=new Set([x+','+y]);function carve(X,Y){a[Y][X]='p';visited.add(X+','+Y);const ds=[[0,-2],[2,0],[0,2],[-2,0]].sort((u,v)=>((u[0]*13+u[1]*7+X*17+Y*11+seed*19)%29)-((v[0]*13+v[1]*7+X*17+Y*11+seed*19)%29));for(const [dx,dy] of ds){let nx=X+dx,ny=Y+dy;if(nx<1||ny<1||nx>17||ny>17||visited.has(nx+','+ny))continue;a[Y+dy/2][X+dx/2]='p';carve(nx,ny)}}carve(x,y);for(let i=0;i<13;i++){let X=2+((i*7+seed*3)%15),Y=2+((i*11+seed*5)%15);if(X>0&&X<18&&Y>0&&Y<18)a[Y][X]='p'}for(let Y=1;Y<=3;Y++)for(let X=7;X<=11;X++)a[Y][X]='p';for(let Y=15;Y<=17;Y++)for(let X=7;X<=11;X++)a[Y][X]='p';a[17][9]='p';a[1][9]='p';return a.map(r=>r.join(''))}
+const ROOTS=shrineMaze(2),RUNES=shrineMaze(5),ALTAR=Array.from({length:19},(_,y)=>Array.from({length:19},(_,x)=>x===0||x===18||y===0||y===18?'T':(x===2||x===16)&&(y===4||y===9||y===14)?'T':x>=5&&x<=13&&y>=2&&y<=9?'S':'p').join(''));
+ART2['翠樹王ヴェルディオン']={c:{a:'#345c35',b:'#a4d675',d:'#21452d',h:'#e8ce7c',e:'#f8e9a1'},r:['...h.....h...','..hh.....hh..','..hbh...hbh..','...hh...hh...','....haah.....','...kaaaak....','..kaeaeakk...','..kaaaaakk...','..kaaaaak....','..kbaaabk....','..kbaaabk....','..kbaaabk....','..kkaaaakk....','...kaaak.....','...kaaak.....','...ka.ka.....','...ka.ka.....','..kka.kka....','..kk...kk....']};
+const SHRINE_BOSS={n:'翠樹王ヴェルディオン',t:'grass',t2:'light',hp:100,a:21,d:18,s:16,mv:[['樹海の鞭','grass',72],['生命の息吹','grass',45],['世界樹の裁き','grass',110],['翠王覚醒','light',95]]};
+let runeCount=0,shrineClear=false,shrineBossStarted=false;
+const SHRINE_SWITCHES=[{m:'runes',x:4,y:4},{m:'runes',x:14,y:9},{m:'runes',x:5,y:14}];
+const shrineSwitchKey=(x,y)=>x+','+y;
+let shrineActivated=[];
+
+const MAPS={roots:ROOTS,runes:RUNES,altar:ALTAR,world:WORLD,cave:CAVE,forest:FOREST,hero:['wwwwwwwww','wkkffffbw','wffffffbw','wfffffffw','wffttfffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww'],jord:['wwwwwwwww','wkkkkfffw','wfffffffw','wfttffbbw','wfffffffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww']};
+let MAP=WORLD,curMap='world',face=[0,1];
+const DOORS={'world:2,4':['hero',4,7],'hero:4,8':['world',2,5],'world:10,4':['jord',4,7],'jord:4,8':['world',10,5],'world:34,6':['cave',2,16],'cave:2,17':['world',34,7],'world:10,15':['forest',10,19],'forest:10,20':['world',10,14],'forest:11,20':['world',10,14],'forest:10,1':['roots',9,17],'roots:9,17':['forest',10,2],'roots:9,1':['runes',9,17],'runes:9,17':['roots',9,2],'runes:9,1':['altar',9,16],'altar:9,17':['runes',9,2]},EXIT={hero:[2,5],jord:[10,5],cave:[34,7],forest:[10,14],roots:[10,2],runes:[10,2],altar:[10,2]};
+const NOTES={},nt=(m,l,v)=>l.forEach(([x,y])=>{NOTES[m+':'+x+','+y]=v});
+nt('hero',[[3,4],[4,4]],['じぶんの 部屋だ。つくえの 上に 古い 日記が ひらいたままだ。','『16年前の ある夜、世界樹の根もとで ひかる赤ん坊を ひろった。この子は…』 そこで ページが やぶれている。']);
+nt('hero',[[7,1],[7,2]],'bed');nt('jord',[[6,3],[7,3]],'bed');
+nt('jord',[[1,1],[2,1],[3,1],[4,1]],['ぎっしり 本が ならんでいる。『灯守の 記録』という 題の 本だけ、ページが ぬけている…']);
+nt('jord',[[2,3],[3,3]],['テーブルには ヨルドの ぼうしと、古い ルーンの 石が ある。']);
+nt('world',[[33,7]],['紅蓮岳（ぐれんだけ）','山肌を溶岩が流れる灼熱の火山。洞窟の奥から魔竜の咆哮が響く。']);
+nt('cave',[[3,16]],['紅蓮岳・灼熱の洞窟','黒曜石の通路が奥へ続く。最深部に恐ろしい気配がある。']);
+nt('world',[[19,7]],['風渡りの平原','ヴァルハイムの東に広がる緑の大地。さらに東には火山地帯が待つ。']);
+nt('world',[[4,8]],['ヴァルハイムの 村','世界樹の 根もとにひらけた 小さな 村。東は 火山、南は 封印の門。']);
+nt('forest',[[10,3],[11,3]],['古代樹の森。千年前、灯守と守護獣がここで誓いを交わしたという。','木の幹に刻まれたルーンが、あなたの手に淡く応える…']);
+nt('forest',[[9,2],[10,2]],['世界樹の根が門を形づくっている。北の神殿へ進もう。']);
+nt('roots',[[9,16]],['第一層・絡み合う根の迷宮。巨大な根が道を覆う。']);
+nt('runes',[[9,16]],['第二層・精霊の回廊。3つのルーンを順に起動せよ。']);
+nt('altar',[[9,15]],['第三層・生命の祭壇。聖なる光が降り注ぐ。']);
+const HERO=[".k.kkkk","kwkssss",".kshsss",".ksssss",".kyyyyy",".kfffff",".kffkff",".kfffff","..kkfff",".kkrrrr","kbbbbbb","kbbBbbb","kbbbyyy",".kBBBk.",".kkkkk."],HC={k:'#1a1a24',w:'#fff',s:'#aab8d0',h:'#eef3ff',y:'#e8b030',f:'#f0c8a0',r:'#d8432a',b:'#3a5fd0',B:'#223a8a'};
+Object.assign(ART2,{
+"ヒノガルド":{c:{a:"#5a1410",b:"#ff9a1a",d:"#2a0a08",h:"#fff0a0",e:"#fff36b"},r:["k.k.....bb","kkk....bbh","kak..kkbbh","kaakkkabbb",".kaaaaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","..kaaakwkk","kkkaaaaaaa","kbbkabbbbh","kbbbkdabbb","kbhbbkdabb","kbbbbkdabb",".kbbbkdaab","..kbbkdaab","...kbkaaab","....kkaakk",".....kkkkk"]},
+"ミズレヴィア":{c:{a:"#1a4a8a",b:"#5fe0ff",d:"#0c2248",h:"#e8ffff",e:"#aaffff"},r:["k......kkk","kk.....kbb","kbk...kbbh","kbbk.kkbbh","kbbbkkkabb",".kbbkaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","kkkkaaaaaa","kbbkdaabbb","kbhbkdaabb","kbbbkdaabb","kbhbkdaabb",".kbbkdaabb","..kkkdaabb","...kdaaabb","...kkdaabb","....kkkkkk"]},
+"ユグハッパ":{c:{a:"#235a30",b:"#b8f070",c:"#3fc060",d:"#12301a",h:"#ff6aa8",e:"#fff06a"},r:["c.c.c...cc","ccccc..ccc",".ccckkkccc",".kkckkkkcc","kaaaaaaaaa","kahaaaaaaa","kaaeekaaaa",".kaaaaaaaa",".kaaakkkkk",".kdaaaaaaa","kccdbbbbbb","kcchdbbbbb","kcccdbbbbb","kcchddbbbb",".kccdddabb","..kcdaaabb","..kdaaaabb","..kkaaaabb","...kkaakkk","....kkkkkk"]},
+"ビリトール":{c:{a:"#3a2a8a",b:"#fff060",d:"#1e1450",h:"#ffffff",e:"#7ffcff"},r:["k.k.....kb","kkk....kbb","kbbk..kbbh",".kbbkkaabb",".kkaaaaaab",".kaaaaaaaa",".kaaeekaaa","..kaaaaaaa","..kaaakkkk","..kkaaaaaa","kbbkkdaabb","kbbbkdaabh","kkbbbkdabb","kkbbbkdabb",".kkbbkdabb","..kkbkdabb","...kkkdaab","....kkaaab",".....kkaak","......kkkk"]}
+});
+Object.assign(ART2,{
+"ヒノコン":{c:{a:"#8a2a1f",b:"#ff9a1a",d:"#4a1210",h:"#ffd070",e:"#ffe14a"},r:["........kk",".......kaa","......kaaa",".....kaeaa",".....kaaaa","......kaaa","...kkkaabb","kkkkaaabbb","kaakaaabbb","kaaakaabbb",".kkkaaabbb","...kaaabbb","kkkkaaabbb","kaakaaabbb","kaaakaabbb","....kaaabb",".....kaabb",".....kaaab","......kaab",".......khh"]},
+"ミズクル":{c:{a:"#4aa890",b:"#3d7fd0",d:"#12305f",h:"#e8ffff",e:"#aaffff"},r:["........kk",".......kaa","......kaea","......kaaa","...kkkkddd","..kdbbbbbb",".kkdbbdbbb","kaaadbbdbb","kkkkdbbbdb","..kdbbdbbb","..kdbbdbbb","kaaadbbdbb","kaakdbdbbb",".kkdbbdbbb","..kdbbbbbb","...kkkkddd","......kkaa",".......kaa","........kk",".........."]},
+"ハッパ":{c:{a:"#4aa84a",b:"#d9f0a0",c:"#2e7a3a",d:"#1b4025",h:"#ff6aa8",e:"#fff06a"},r:["..kkkk.ccc",".kwwwwkcch",".kwkkwkaaa",".kwwwwkaaa","kkaaaaaaaa","kaaaaaaaaa","kaaaaaaaaa","kkkkkkkkkk","kaaabbbbbb","kaaabbbbbb","kaaabbbbbb","kcaabbbbbb","kaaabbbbbb","kaaaabbbbb","kkaaaabbbb","kaaaaaabbb","kaakkkaabb","kkkkkkkaab","kk.kk.kkkk",".........."]},
+"ビリット":{c:{a:"#6a58c0",b:"#ffe34a",d:"#33226b",h:"#ffffff",e:"#6ff0ff"},r:[".......kbb","......kbbb",".....kkaab","....kaaaaa","...kaaaaaa","...kaaeaaa","...kaaaaaa","...kaaabbb","....kaaakb","..kkkaaaaa",".kbbkaaaaa","kbbbkaaahh","kbbbbkaahh","kkbbkaaaah",".kkkkaaaaa","...kkaaaaa","....kkaaaa",".....kkkkk","....kbk.kb","....kkk.kk"]},
+"ミズレヴィア":{c:{a:"#2a7a6a",b:"#2f6fd0",d:"#0c2248",h:"#aaffff",e:"#aaffff"},r:[".......kbb","......kbaa","......kaea",".....kkaaa","k.kkkkkddd",".kkdbbbbhb","kkkdbbdbbb","kaaadbhdbb","kkkkdbbbdb","k.kdbbdbhb","..kdbbdbbb","kaaadbbdbb","kaakdbdbbb","kkkdbhdbbb","k.kdbbbbbb","..kkkkkddd","......kkaa",".......kaa","........kk",".........."]},
+"ユグハッパ":{c:{a:"#1f7a3a",b:"#c8f080",c:"#3fc060",d:"#12301a",h:"#ff6aa8",e:"#fff06a"},r:["c.c.c..ccc","ccckkkkccc",".kwwwwkcch",".kwkkwkaaa",".kwwwwkaaa","kkaaaaaaaa","kaaaaaaaaa","kaaaaaaaaa","kkkkkkkkkk","kaaabbbbbb","kcaabbbbbb","kcccbbbbbb","kcaabbbbbb","kaaaabbbbb","kkaaaabbbb","kaaaaaabbb","kaakkkaabb","kkkkkkkaab","kk.kk.kkkk",".........."]}
+});
+const ART3={
+"ヒノコン":{c:{a:'#e8663a',b:'#ffe0a0',o:'#ff7a1a',f:'#ffd23a',y:'#1e6a6a',g:'#ff8a3a'},s:[['p',[18,22,24,27,28,23,29,16,27,12,24,15,24,20,20,19],'a'],['p',[26,13,24,7,27,2,28,7,31,9,29,14],'o'],['p',[27,12,26,8,28,5,29,9,28,12],'f',1],['e',16,21,8,6,'a'],['e',12,24,4.5,3.5,'b'],['e',20,27,3,3,'a'],['e',10,27,3,3,'a'],['e',9,30,3.2,1.2,'a'],['e',20,30,3.2,1.2,'a'],['e',10,12,9,8,'a'],['e',4,15,4.2,3,'a'],['e',9,17,5.5,2,'b'],['p',[12,5,15,1,16,7],'o'],['e',10,11,2.3,2.8,'w',1],['e',10.4,11.6,1.4,1.8,'y',1],['e',10.6,11.2,.7,.9,'k',1],['e',3,14,.7,.7,'k',1]]},
+"ミズクル":{c:{a:'#58c0b0',s:'#2f78d0',r:'#8fd0ff',b:'#ffe8b0',g:'#3d9be0'},s:[['p',[29,22,31,24,28,25],'a'],['e',24,27,3.5,3,'a'],['e',13,27,3.5,3,'a'],['e',20,17,10,9,'s'],['e',20,25,11,2.5,'b'],['e',20,15,4,3.5,'r'],['e',14,17,2.5,3,'r'],['e',26,17,2.5,3,'r'],['e',20,21,3.5,2.5,'r'],['e',13,18,5,4,'a'],['e',9,14,7,7,'a'],['e',3.5,16,3.5,2.5,'a'],['e',8,19,4,1.8,'b'],['e',8,13,2,2.5,'w',1],['e',8.4,13.6,1.2,1.6,'k',1],['e',8.6,13,.5,.6,'w',1]]},
+"ハッパ":{c:{a:'#58c050',b:'#e8f6b0',c:'#2e8a3a',y:'#ffe44a',p:'#ff7aa8',m:'#2a5a2a',g:'#4cc04c'},s:[['e',22,22,7,6,'a'],['e',26,29,4,1.6,'a'],['e',17,20,9,7,'a'],['e',13,24,6,3.5,'b'],['e',11,26,2.5,4,'a'],['e',9,29,3.5,1.5,'a'],['e',18,16,3,2,'c'],['e',23,19,2.5,1.8,'c'],['e',9,15,9,7,'a'],['e',7,19.5,3.5,2,'b'],['e',6,18,6.5,.6,'m',1],['e',8,8,4.5,4.5,'a'],['e',8,8,3.2,3.2,'y',1],['e',7.5,8,1.4,2.4,'k',1],['e',7,7,.7,.7,'w',1],['p',[13,10,18,5,19,10],'c'],['e',15,8,2,2,'p',1],['e',15,8,.8,.8,'y',1]]},
+"ビリット":{c:{a:'#ffd83a',v:'#6a58c0',b:'#fff3a0',o:'#ff9a2a',c:'#6a58c0',r:'#ff7a5a',g:'#ffe14a'},s:[['p',[24,18,31,13,30,20,31,24,24,23],'v'],['p',[13,26,15,26,15,30,13,30],'o',1],['p',[19,26,21,26,21,30,19,30],'o',1],['e',14,30.5,2.4,.9,'o',1],['e',20,30.5,2.4,.9,'o',1],['e',17,19,10,9,'a'],['e',13,22,6,5,'b'],['e',20,20,5,6,'v'],['e',11,13,8,8,'a'],['p',[11,7,15,0,14,5,18,5,12,12,13,7],'c'],['p',[4,13,0,15,4,17],'o'],['e',8,12,2.2,2.8,'w',1],['e',8.5,12.5,1.3,1.7,'k',1],['e',8,11.5,.6,.6,'w',1],['e',9,17,2,1.5,'r',1]]}
+};
+ART3["ヒノガルド"]={c:{...ART3["ヒノコン"].c,a:'#b82a1a',m:'#ff8a2a',h:'#f0e0b0'},s:[['p',[17,17,9,2,17,7,22,0,24,10,30,6,27,18],'m'],...ART3["ヒノコン"].s,['p',[9,6,5,1,12,5],'h'],['p',[13,5,16,0,17,6],'h'],['p',[26,10,22,3,27,0,29,5,31,2,31,10],'o'],['p',[2,16,3,18,4,16],'w',1]]};
+ART3["ミズレヴィア"]={c:{...ART3["ミズクル"].c,a:'#2a8a80',s:'#1f5fc0',r:'#aaffff',u:'#c0d8f0'},s:[...ART3["ミズクル"].s,['p',[14,9,15,2,18,8],'u'],['p',[21,7,23,0,26,7],'u'],['p',[27,10,31,5,30,12],'u'],['p',[8,8,5,2,11,7],'u']]};
+ART3["ユグハッパ"]={c:{...ART3["ハッパ"].c,a:'#2f9a4a',c:'#1f6a30',t:'#7a5a30'},s:[['p',[9,8,4,2,6,0,11,6],'t'],['p',[14,7,16,0,19,1,17,8],'t'],['e',5,1.5,2.2,1.4,'c'],['e',18,1.5,2.2,1.4,'c'],...ART3["ハッパ"].s]};
+ART3["ビリトール"]={c:{...ART3["ビリット"].c,a:'#5a48b0',v:'#ffd83a',b:'#ffe9a0',c:'#ffe14a'},s:[['p',[16,16,8,2,18,9,24,0,25,10,31,4,27,18],'v'],...ART3["ビリット"].s,['p',[9,6,6,0,12,4],'c'],['p',[14,5,17,0,16,8],'c']]};
+
+// 三系統の進化は元の生物モチーフを維持し、体格・角・甲羅・装甲を段階的に変化させる。
+const ELL=(x,y,rx,ry,c)=>['e',x,y,rx,ry,c],POL=(pts,c)=>['p',pts,c];
+function lizard(q){
+ const sh=[POL([24,19,30,13,31,5,29,16,29,25,24,27],'o'),ELL(20,22,9+q,6+q*.4,'a'),ELL(18,24,6,4,'b'),ELL(12,27,3.2+q*.5,3.2,'a'),ELL(26,27,3.2+q*.5,3.2,'a'),ELL(10,14,7.5+q*.3,7+q*.3,'a'),POL([4,15,0,19,7,20,10,18],'a'),ELL(5,18,4.2,2.1,'b'),ELL(9,13,2.4,2.7,'w'),ELL(9.5,13.6,1.1,1.6,'k'),ELL(16,15,1.6,2,'w'),ELL(16.3,15.4,.9,1.2,'k'),ELL(2.5,18,.7,.7,'k'),ELL(7,20,2.4,.8,'m'),ELL(12,21,3,2,'a'),ELL(25,21,3,2,'a'),POL([7,8,9,4,12,8],'o')];
+ if(q>=1)sh.push(POL([9,8,11,1,14,9],'h'),POL([16,9,20,1,21,12],'h'),POL([19,17,23,10,26,18],'o'),POL([23,19,27,11,30,18],'h'),ELL(18,23,5,2.2,'m'),ELL(12,28,2,1,'h'),ELL(27,28,2,1,'h'));
+ if(q>=2)sh.push(POL([6,10,7,0,13,8],'h'),POL([15,7,18,0,23,8],'h'),POL([23,12,28,2,29,16],'h'),POL([23,18,31,9,31,22],'m'),POL([17,18,21,11,23,20],'o'),ELL(20,22,3.5,2,'o'),POL([4,20,7,23,9,21],'w'));
+ return {c:{a:q===0?'#ef8048':q===1?'#d54a2c':'#a12b25',b:'#ffe1a5',o:'#ff8d22',h:'#ffe49a',m:'#823729',g:'#ff8b3a'},s:sh,sz:q===2?1.28:q===1?1.15:1};
+}
+function turtle(q){const sh=[ELL(25,26,4,3,'a'),ELL(13,28,4,3,'a'),ELL(21,18,10+q*.3,9+q*.3,'s'),ELL(21,18,8,7,'r'),ELL(21,18,3,7,'s'),ELL(21,18,8,1.2,'s'),ELL(11,16,7,6,'a'),ELL(6,18,4,2.5,'a'),ELL(10,13,2.2,2.5,'w'),ELL(10.5,13.6,1.1,1.4,'k'),ELL(16,14,1.5,1.9,'w'),ELL(16.3,14.3,.8,1,'k'),ELL(5,18,.7,.7,'k'),ELL(9,20,3,1.5,'b'),POL([27,23,31,20,30,27],'a')];
+ if(q>=1)sh.push(POL([12,12,14,5,17,13],'u'),POL([19,10,22,3,25,12],'u'),POL([25,12,29,5,30,17],'u'),ELL(21,19,3,3,'h'));
+ if(q>=2)sh.push(POL([12,10,11,1,18,9],'u'),POL([19,10,23,0,27,11],'u'),POL([26,14,31,4,31,20],'u'),POL([5,12,3,7,10,11],'u'),ELL(21,20,4,3,'h'));
+ return {c:{a:q===0?'#63c6b5':'#338cba',s:q===2?'#163f8e':'#2869b5',r:q===2?'#6bd4f8':'#83caff',u:'#d5f3ff',h:'#e6faff',b:'#e3f7ff',g:'#66c9fa'},s:sh,sz:q===2?1.28:q===1?1.15:1};
+}
+function frog(q){const sh=[ELL(21,23,8+q,6+q*.5,'a'),ELL(24,28,6,3,'a'),ELL(13,25,5,4,'b'),ELL(8,29,4,2,'a'),ELL(27,29,5,2,'a'),ELL(12,16,9+q*.5,7+q*.5,'a'),ELL(6,10,4,4,'a'),ELL(17,10,4,4,'a'),ELL(6,10,2.6,2.7,'y'),ELL(17,10,2.6,2.7,'y'),ELL(6.5,10,1.2,2,'k'),ELL(17.5,10,1.2,2,'k'),ELL(11,20,7,2,'b'),ELL(11,18,5,.7,'c')];
+ if(q>=1)sh.push(POL([14,8,17,2,19,9],'c'),POL([20,16,26,10,27,18],'c'),ELL(23,18,2,2,'p'));
+ if(q>=2)sh.push(POL([3,7,0,1,7,4],'c'),POL([17,7,20,0,24,5],'c'),POL([24,13,29,4,31,15],'c'),ELL(23,17,3,2,'p'),ELL(19,12,2,2,'p'));
+ return {c:{a:q===0?'#65cb58':q===1?'#42a84b':'#238a3c',b:'#e4f4a9',c:'#286e34',y:'#ffe66b',p:'#f38caf',g:'#67c75a'},s:sh,sz:q===2?1.27:q===1?1.14:1};
+}
+[['ヒノコン',lizard(0)],['ヒノガルド',lizard(1)],['ムスペルガ',lizard(2)],['ミズクル',turtle(0)],['ミズレヴィア',turtle(1)],['ヨルムレヴィア',turtle(2)],['ハッパ',frog(0)],['ユグハッパ',frog(1)],['ユグドラガマ',frog(2)]].forEach(([n,a])=>ART3[n]=a);
+// 斜め前を向くため、既存の横向きモンスターにも手前側の目と頬を補う。
+const starterFront=new Set(['ヒノコン','ヒノガルド','ムスペルガ','ミズクル','ミズレヴィア','ヨルムレヴィア','ハッパ','ユグハッパ','ユグドラガマ']);
+function frontViewDetail(sp){if(starterFront.has(sp.n))return;const a=ART3[sp.n];if(!a||a._front)return;a._front=true;
+ const eyeColor=a.c.b||a.c.r||a.c.a||'#ffffff';a.c.F=eyeColor;
+ a.s.push(['e',14.5,14,1.8,2.2,'w',1],['e',14.8,14.5,.9,1.3,'k',1],['e',11.4,19,2.1,1.1,'F',1]);}
+const DEF={w:'#fff',k:'#1a1a24'},hx=h=>{const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]},tn=(c,f)=>c.map(v=>Math.round(f>0?v+(255-v)*f:v*(1+f)));
+function draw(sp,px=128,flip){frontViewDetail(sp);const A=ART3[sp.n],C={...DEF,...A.c},N=32,buf=new Array(N*N).fill(null);px=Math.round(px*(A.sz||1));
+for(const sh of A.s){let cx,cy,rx,ry,col,flat,ins;
+if(sh[0]=='e'){[,cx,cy,rx,ry,col,flat]=sh;ins=(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1}
+else{const P=sh[1];col=sh[2];flat=sh[3];const X=P.filter((_,i)=>i%2==0),Y=P.filter((_,i)=>i%2);cx=(Math.min(...X)+Math.max(...X))/2;cy=(Math.min(...Y)+Math.max(...Y))/2;rx=(Math.max(...X)-Math.min(...X))/2||1;ry=(Math.max(...Y)-Math.min(...Y))/2||1;
+ins=(x,y)=>{let c=false;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2)if((P[i+1]>y)!=(P[j+1]>y)&&x<(P[j]-P[i])*(y-P[i+1])/(P[j+1]-P[i+1])+P[i])c=!c;return c}}
+const b=hx(C[col]||col);
+for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(ins(x+.5,y+.5)){const l=(x+.5-cx)/rx*-.55+(y+.5-cy)/ry*-.85;buf[y*N+x]=flat?b:tn(b,l>.5?.3:l<-.45?-.35:0)}}
+const t=document.createElement('canvas');t.width=t.height=N;const tx=t.getContext('2d'),im=tx.createImageData(N,N);
+for(let y=0;y<N;y++)for(let x=0;x<N;x++){let p=buf[y*N+x];if(!p&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>x+a>=0&&x+a<N&&y+b>=0&&y+b<N&&buf[(y+b)*N+x+a]))p=[26,26,36];if(p)im.data.set([...p,255],(y*N+x)*4)}
+tx.putImageData(im,0,0);const c=document.createElement('canvas');c.width=c.height=px;const g=c.getContext('2d');g.imageSmoothingEnabled=false;if(flip){g.translate(px,0);g.scale(-1,1)}g.drawImage(t,0,0,px,px);
+c.style.filter=`drop-shadow(0 0 ${(A.sz||1)>1.2?12:6}px ${C.g})`;return c}
+const MV=(t,a,b)=>[['たいあたり','normal',40],[a,t,50],['ひっかく','normal',35],[b,t,65]];
+SP.push({n:'ピョンタ',t:'normal',hp:42,a:10,d:9,s:14,mv:MV('normal','とびげり','ぜんりょくとっしん')},{n:'コギツネ',t:'fire',hp:40,a:12,d:8,s:12,mv:MV('fire','きつねび','ほのおのしっぽ')},{n:'アザラ',t:'water',hp:52,a:9,d:11,s:7,mv:MV('water','あわのうた','しぶきのたいあたり')},{n:'ミミクロ',t:'grass',hp:44,a:11,d:9,s:11,mv:MV('grass','はっぱのかぜ','もりのさけび')},{n:'ビリハリ',t:'electric',hp:42,a:11,d:11,s:9,mv:MV('electric','ぱちぱちはり','ほうでんはりせんぼん')},{n:'コグマ',t:'normal',hp:56,a:13,d:11,s:6,mv:MV('normal','つめでひっかき','のしかかり')});
+Object.assign(ART3,{
+'ピョンタ':{c:{a:'#f0e0c8',b:'#fff8ee',p:'#f0a0b0',g:'#f0d8b0'},s:[['e',27,24,3,3,'b'],['e',18,22,9,8,'a'],['e',13,26,5,4,'a'],['e',12,30,4,1.5,'a'],['e',13,24,5,4,'b'],['e',12,6,2.4,5.5,'a'],['e',16,7,2.2,5,'a'],['e',12,6,1,4,'p'],['e',16,7,.9,3.6,'p'],['e',10,15,8,7,'a'],['e',4,17,3,2.5,'b'],['e',2.5,16,.9,.8,'p',1],['e',8,14,2,2.4,'w',1],['e',8.4,14.5,1.2,1.5,'k',1],['e',9,18,1.8,1.2,'p',1],['e',9,26,2.5,3,'a']]},
+'コギツネ':{c:{a:'#e8802a',b:'#fff0d8',o:'#7a3a1a',f:'#ffd23a',g:'#ff8a3a'},s:[['p',[20,24,26,26,31,20,30,12,26,16,23,19],'a'],['p',[28,14,30,12,31,18,29,20],'b'],['p',[29,12,28,7,31,5,31,12],'f'],['e',22,28,2.2,3,'o'],['e',12,28,2.2,3,'o'],['e',17,22,8,6,'a'],['e',12,24,4,3.5,'b'],['e',9,14,7.5,6.5,'a'],['e',3.5,16,4,2.5,'a'],['e',4,18,3.5,1.5,'b'],['e',1.5,16,.9,.8,'k',1],['p',[7,9,8,1,13,8],'a'],['p',[14,8,17,1,19,9],'a'],['p',[9,8,9,3,11,8],'o'],['e',8,13,2,2.3,'w',1],['e',8.4,13.5,1.2,1.4,'k',1]]},
+'アザラ':{c:{a:'#9ab8d8',b:'#e8f4ff',o:'#2a3a5a',g:'#6fb0e8'},s:[['p',[27,22,31,18,31,27],'a'],['e',18,22,11,7,'a'],['e',16,25,8,3.5,'b'],['e',20,19,1.2,1,'o'],['e',24,22,1.2,1,'o'],['e',17,17,1,.8,'o'],['e',12,27,4,1.8,'a'],['e',9,17,7.5,6.5,'a'],['e',5,19,4,3,'b'],['e',2.5,18.5,1.2,1,'k',1],['e',8,15,2,2.3,'w',1],['e',8.3,15.5,1.2,1.5,'k',1]]},
+'ミミクロ':{c:{a:'#8a6a3a',b:'#e8d8a8',l:'#5aa84a',y:'#ffe14a',o:'#ff9a2a',g:'#9ac060'},s:[['e',22,22,6,8,'a'],['p',[16,28,18,31,24,31,22,27],'a'],['e',16,20,9,9,'a'],['e',13,22,5.5,6,'b'],['e',13,20,1,.8,'a'],['e',12,24,1,.8,'a'],['e',15,25,1,.8,'a'],['e',13,30,3,1,'o',1],['e',19,30,3,1,'o',1],['p',[5,8,5,2,11,5],'a'],['p',[13,5,18,2,19,8],'a'],['e',12,11,9,7.5,'a'],['p',[12,6,13,1,16,5],'l'],['p',[10,7,8,3,13,5],'l'],['e',8.5,11,3.2,3.4,'y',1],['e',8,11,1.6,2,'k',1],['e',7.4,10,.7,.7,'w',1],['p',[5,13,2,15,5,17],'o']]},
+'ビリハリ':{c:{a:'#c8a06a',q:'#4a3a9a',s:'#ffe14a',b:'#f0dcb0',g:'#ffe14a'},s:[['p',[14,9,15,2,19,8],'s'],['p',[19,7,22,1,25,8],'s'],['p',[24,9,28,3,29,11],'s'],['p',[27,13,31,9,31,18],'s'],['e',10,28,3,2,'a'],['e',20,28,3,2,'a'],['e',20,17,11,10,'q'],['e',9,21,7,6,'b'],['e',4,23,3.5,2.5,'b'],['e',2.3,22.5,1,.9,'k',1],['e',10,14.5,2,2.2,'a'],['e',8,20,1.8,2.1,'w',1],['e',8.3,20.5,1.1,1.3,'k',1]]},
+'コグマ':{c:{a:'#a8683a',b:'#e8c898',g:'#d09a60'},s:[['e',29,21,2,2,'a'],['e',19,22,10,8,'a'],['e',16,24,5.5,4,'b'],['e',24,28,3.5,3,'a'],['e',12,28,3.5,3,'a'],['e',4,8,3,3,'a'],['e',4,8,1.5,1.5,'b'],['e',15,6.5,3,3,'a'],['e',15,6.5,1.5,1.5,'b'],['e',10,14,9,8,'a'],['e',5,17,4.5,3.5,'b'],['e',2.5,16,1.4,1.1,'k',1],['e',8,12,1.9,2.2,'w',1],['e',8.3,12.6,1.1,1.3,'k',1]]},
+'ムスペルガ':{c:{...ART3['ヒノガルド'].c,a:'#3a1418',m:'#ff5a1a',o:'#ffb020',h:'#ffe9a0',g:'#ff4a1a'},s:[...ART3['ヒノガルド'].s,['p',[9,6,8,1,11,5],'o'],['p',[12,5,13,0,15,5],'o'],['p',[16,14,18,8,20,14],'o'],['p',[20,15,23,9,24,16],'o'],['e',14,22,1.5,1.5,'h',1]]},
+'ヨルムレヴィア':{c:{...ART3['ミズレヴィア'].c,a:'#1f6f78',s:'#16408f',r:'#d8ffff'},s:[...ART3['ミズレヴィア'].s,['p',[16,8,17,0,20,7],'u'],['p',[23,6,27,0,28,8],'u'],['p',[4,10,2,4,8,8],'u']]},
+'ユグドラガマ':{c:{...ART3['ユグハッパ'].c,a:'#1f8a3a'},s:[['p',[3,6,0,1,3,0,6,5],'t'],['p',[19,6,22,0,25,2,21,8],'t'],...ART3['ユグハッパ'].s,['e',20,12,2.4,2.4,'p',1],['e',24,17,2,2,'p',1],['e',16,13,1.7,1.7,'p',1]]},
+'ライゴウオウ':{c:{...ART3['ビリトール'].c,a:'#463a9a',c:'#fff7a0',v:'#ffe14a'},s:[...ART3['ビリトール'].s,['p',[27,10,31,6,29,12,31,16,26,14],'c'],['p',[3,22,0,26,5,25,3,30,8,24],'c'],['p',[8,3,6,0,11,2],'c']]}
+});
+const EVO={
+"ヒノコン":{n:"ヒノガルド",t:"fire",hp:56,a:16,d:12,s:12,mv:[["たいあたり","normal",45],["ひのこ","fire",60],["かみくだく","normal",55],["ごうえんのブレス","fire",85]]},
+"ミズクル":{n:"ミズレヴィア",t:"water",hp:63,a:13,d:14,s:10,mv:[["たいあたり","normal",45],["みずでっぽう","water",60],["かみくだく","normal",55],["だいかいしょう","water",85]]},
+"ハッパ":{n:"ユグハッパ",t:"grass",hp:60,a:14,d:13,s:11,mv:[["たいあたり","normal",45],["はっぱカッター","grass",60],["かみくだく","normal",55],["せかいじゅのいかり","grass",85]]},
+"ビリット":{n:"ビリトール",t:"electric",hp:50,a:16,d:10,s:16,mv:[["たいあたり","normal",45],["でんきショック","electric",60],["かみくだく","normal",55],["らいていのいかずち","electric",85]]}
+};
+ART3['魔竜ゴルヴァザーク']={c:{...ART3['ヒノガルド'].c,a:'#2a1a30',b:'#7a2a2a',m:'#5a1428',o:'#ff3a1a',f:'#ffb030',h:'#e8dcc0',u:'#d8d0c0',r:'#ff2a2a',y:'#ff2a2a',g:'#c02a4a'},s:[...ART3['ヒノガルド'].s,['e',10,11,2.5,3,'r',1],['e',10.5,11.3,.6,1.7,'k',1],['p',[6,8,14,11.5,14,9.5,6,6.5],'k',1],['p',[2,16,3,19,4.5,16],'w',1],['p',[6,17,7,20,8.5,17],'w',1],['p',[13,12,15,5,17,12],'u'],['p',[17,13,20,6,22,14],'u'],['p',[21,15,25,9,26,17],'u']]};
+const BOSS={n:'魔竜ゴルヴァザーク',t:'fire',hp:56,a:16,d:12,s:12,mv:[['かみくだく','normal',50],['ごうえんのブレス','fire',70],['やみのつめ','normal',55],['ぎゃくえんのブレス','fire',85]]};
+Object.assign(EVO,{
+'ヒノガルド':{n:'ムスペルガ',t:'fire',lv:20,hp:70,a:21,d:15,s:14,mv:[['たいあたり','normal',50],['ひのこ','fire',65],['かみくだく','normal',60],['ごくえんのほのお','fire',100]]},
+'ミズレヴィア':{n:'ヨルムレヴィア',t:'water',lv:20,hp:80,a:17,d:18,s:11,mv:[['たいあたり','normal',50],['みずでっぽう','water',65],['かみくだく','normal',60],['しんかいのうねり','water',100]]},
+'ユグハッパ':{n:'ユグドラガマ',t:'grass',lv:20,hp:76,a:18,d:17,s:12,mv:[['たいあたり','normal',50],['はっぱカッター','grass',65],['かみくだく','normal',60],['せかいじゅのさばき','grass',100]]},
+'ビリトール':{n:'ライゴウオウ',t:'electric',lv:20,hp:64,a:21,d:13,s:18,mv:[['たいあたり','normal',50],['でんきショック','electric',65],['かみくだく','normal',60],['らいごうのいかずち','electric',100]]}
+});
+async function evolve(m){const e=EVO[m.sp.n],o=m.sp.n;await say(`おや? ${o}の ようすが…!`,1200);const s=$('#me .spr');s.classList.add('evo');se('evo');await sleep(1500);s.classList.remove('evo');
+m.sp=e;markDex(e.n,true);m.learned=moves(m);const om=m.max;m.max=Math.round(e.hp*(1+(m.lv-5)*.12));m.hp+=m.max-om;box(m,$('#me'));await say(`${o}は ${e.n}に しんかした!`,1600)}
+let storage=[],dex={};const PARTY_MAX=6,RARE_RATE=.045;
+function markDex(n,c){dex[n]=dex[n]||{seen:1,caught:0};if(c)dex[n].caught++}
+Object.assign(ART3,{
+'コハクヒノコン':{...ART3['ヒノコン'],c:{...ART3['ヒノコン'].c,a:'#d69b28',b:'#fff0a8',o:'#ffe05a',f:'#fff7cf',y:'#7b4b18',g:'#ffe9a0'}},
+'シラユキミズクル':{...ART3['ミズクル'],c:{...ART3['ミズクル'].c,a:'#d8f4ff',s:'#6aa9dc',r:'#ffffff',b:'#e7f8ff',g:'#9adfff'}},
+'モモハナハッパ':{...ART3['ハッパ'],c:{...ART3['ハッパ'].c,a:'#f18bb5',b:'#fff0f6',c:'#b94c83',y:'#ffe45c',p:'#ffb5d0',m:'#8c416a',g:'#f7a3c8'}},
+'ヨイヤミビリット':{...ART3['ビリット'],c:{...ART3['ビリット'].c,a:'#34304f',v:'#b89cff',b:'#e5d8ff',o:'#a58aff',c:'#8b70d6',r:'#d8c5ff',g:'#bda7ff'}}
+});
+const RARE=[
+{n:'コハクヒノコン',t:'fire',hp:49,a:14,d:11,s:11,mv:[['たいあたり','normal',42],['こはくのほのお','fire',58],['ひっかく','normal',38],['きんいろのほのお','fire',72]]},
+{n:'シラユキミズクル',t:'water',hp:55,a:11,d:14,s:9,mv:[['たいあたり','normal',42],['ゆきどけの水','water',58],['ひっかく','normal',38],['こおりのしずく','water',72]]},
+{n:'モモハナハッパ',t:'grass',hp:53,a:13,d:12,s:10,mv:[['たいあたり','normal',42],['はなびら','grass',58],['ひっかく','normal',38],['ももいろブーケ','grass',72]]},
+{n:'ヨイヤミビリット',t:'electric',hp:45,a:14,d:10,s:15,mv:[['たいあたり','normal',42],['よいやみの雷','electric',58],['ひっかく','normal',38],['ほしぞらスパーク','electric',72]]}
+];
+const up=(n,nn)=>{const s=SP.find(x=>x.n==n);return{...s,n:nn,lv:14,hp:Math.round(s.hp*1.28),a:Math.round(s.a*1.28),d:Math.round(s.d*1.28),s:s.s+2,mv:s.mv.map(v=>[v[0],v[1],v[2]+10])}};
+Object.assign(EVO,{'ピョンタ':up('ピョンタ','ツキミウサ'),'コギツネ':up('コギツネ','ホムラキュウビ'),'アザラ':up('アザラ','オオアザラ'),'ミミクロ':up('ミミクロ','ミミクロード'),'ビリハリ':up('ビリハリ','ビリハリオン'),'コグマ':up('コグマ','オオグマ')});
+Object.assign(ART3,{
+'ツキミウサ':{c:{...ART3['ピョンタ'].c,a:'#e0d8f8',b:'#ffffff',p:'#c8a0e8',y:'#ffe14a',g:'#c8b0ff'},s:[['e',9,4,2,5,'a'],['e',20,6,2,4.5,'a'],...ART3['ピョンタ'].s,['e',10,9.5,1.6,1.6,'y',1],['e',28,22,4,4,'b']]},
+'ホムラキュウビ':{c:{...ART3['コギツネ'].c,a:'#d84a2a',f:'#ffe14a',g:'#ff6a3a'},s:[['p',[22,22,30,24,31,28,26,29],'a'],['p',[22,20,29,15,31,20,26,22],'a'],['e',30,26,1.6,1.6,'f',1],['e',30,18,1.6,1.6,'f',1],...ART3['コギツネ'].s,['p',[8,8,9,2,12,7],'f']]},
+'オオアザラ':{c:{...ART3['アザラ'].c,a:'#6a90c0',b:'#e8f4ff',g:'#8fd0ff'},s:[...ART3['アザラ'].s,['p',[3,20,2,26,5,21],'w',1],['p',[6,21,6,27,8,22],'w',1],['e',10,10.5,2.2,1.2,'b']]},
+'ミミクロード':{c:{...ART3['ミミクロ'].c,a:'#5a4028',b:'#d8c890',y:'#ff6a3a'},s:[['p',[20,14,28,6,31,16,27,26,20,24],'a'],...ART3['ミミクロ'].s,['p',[6,6,3,0,9,4],'l']]},
+'ビリハリオン':{c:{...ART3['ビリハリ'].c,q:'#2a2a7a'},s:[['p',[12,12,10,5,16,10],'s'],['p',[30,17,31,24,26,23],'s'],...ART3['ビリハリ'].s]},
+'オオグマ':{c:{...ART3['コグマ'].c,a:'#7a4a2a',g:'#e0a060'},s:[...ART3['コグマ'].s,['p',[11,9,13,12,12,13,10,10],'k',1],['e',20,16,5,4,'g']]}
+});
+ART3['ハッパ']={c:{a:'#2e7a5a',b:'#c8f070',c:'#3fe08a',y:'#ffcf3a',m:'#12301a',l:'#1b5a38',g:'#3fe08a',p:'#ff4a6a'},s:[['p',[18,18,26,16,31,26,28,30,20,29,17,24],'a'],['e',27,29.5,4.5,1.5,'a'],['e',17,21,9,6.5,'a'],['e',12,25,5.5,3,'b'],['p',[10,22,14,22,13,29,8,29],'a'],['e',9,29.5,3,1.2,'a'],['p',[12,16,16,14,21,16,19,17,14,18],'c'],['p',[18,18,24,18,25,20,19,20],'c'],['p',[3,15,9,7,17,9,18,16,12,21,5,20],'a'],['e',8,20,4.5,1.6,'b'],['p',[6,9,12,7,15,9,12,10],'l'],['p',[14,9,16,2,19,9],'c'],['p',[17,10,21,4,22,12],'c'],['p',[11,8,12,3,14,8],'l'],['e',10,11.5,3.3,3.3,'y',1],['e',10.4,11.8,2,2.2,'k',1],['e',9.4,10.7,.9,.9,'w',1],['e',11.2,12.8,.45,.45,'w',1],['e',4.5,15,.6,.6,'k',1],['e',9,16.5,1.2,.8,'p',1]]};
+ART3['ユグハッパ']={c:{...ART3['ハッパ'].c,a:'#256a4a',c:'#5affa0',h:'#ffd060'},s:[['p',[6,10,3,3,9,8],'l'],...ART3['ハッパ'].s,['p',[20,17,24,9,26,17],'c'],['p',[24,19,30,13,30,21],'c'],['e',16,21,1,1,'h',1]]};
+ART3['ユグドラガマ']={c:{...ART3['ユグハッパ'].c,a:'#1e5a3a',c:'#7affc0',t:'#c8a040'},s:[['p',[10,9,5,2,8,0,12,7],'t'],['p',[15,8,19,0,22,3,18,10],'t'],...ART3['ユグハッパ'].s,['p',[3,14,0,10,5,12],'t']]};
+ART3['モモハナハッパ']={c:{...ART3['ハッパ'].c,a:'#e0709a',b:'#fff0f6',c:'#ff9ac8',y:'#ffe45c',l:'#a03a6a',g:'#ffb0d0',p:'#ffffff'},s:ART3['ハッパ'].s};
+SP.push({n:'ヒカリジカ',t:'light',hp:46,a:11,d:10,s:11,mv:MV('light','ひかりのつの','せいなるひかり')},{n:'クロコウ',t:'dark',hp:44,a:12,d:9,s:13,mv:MV('dark','やみのはね','ほしくいのかげ')});
+Object.assign(ART3,{
+'ヒカリジカ':{c:{a:'#e8d8b0',b:'#fff8e0',s:'#ffe96a',o:'#c8a870',g:'#ffe96a'},s:[['e',27,20,2,2.5,'b'],['e',24,27,1.5,4,'a'],['e',20,27,1.5,4,'a'],['e',14,27,1.5,4,'a'],['e',10,27,1.5,4,'a'],['e',19,21,9,5.5,'a'],['e',17,24,6,2.5,'b'],['e',16,18.5,1,.8,'o'],['e',20,18,1,.8,'o'],['e',24,19.5,1,.8,'o'],['p',[10,21,9,11,15,11,17,21],'a'],['p',[9,6,12,3,13,8],'a'],['p',[7,6,5,1,6.5,0,8.5,5],'s'],['p',[11,6,13,1,14.5,2,12.5,7],'s'],['p',[6,3,3,2,3,4],'s'],['e',8,10,5.5,4.5,'a'],['e',3.5,12,3.5,2.5,'b'],['e',1.5,12,.8,.7,'k',1],['e',7.5,9.5,1.6,1.9,'w',1],['e',7.8,10,1,1.3,'k',1],['e',7.3,9,.5,.5,'w',1]]},
+'クロコウ':{c:{a:'#4a3a6a',b:'#8a7aaa',m:'#2a1a4a',r:'#ff5a8a',g:'#c070ff'},s:[['p',[16,14,21,3,26,9,29,5,31,16,25,19,20,20],'m'],['p',[14,18,9,26,13,31,18,28,24,31,23,22],'m'],['e',15,17,6,7,'a'],['e',13,19,3.5,4,'b'],['p',[6,8,5,0,10,6],'a'],['p',[12,6,15,0,16,8],'a'],['p',[6.5,6,6,2.5,9,6],'r'],['e',10,11,6.5,5.5,'a'],['e',5.5,13,3,2,'a'],['p',[4,14.5,4.7,17,5.5,14.7],'w',1],['p',[7,15,7.5,17,8.3,15],'w',1],['e',9,10,2,2.2,'r',1],['e',9.2,10.2,.5,1.3,'k',1],['e',8.5,9.3,.5,.5,'w',1]]}
+});
+const RN={'ビリット':'ヒカリドリ','ビリトール':'ヒカリワシ','ライゴウオウ':'コウリンオウ','ヨイヤミビリット':'ヨイヤミドリ','ビリハリ':'ヨルハリ','ビリハリオン':'ヨルハリオン'};
+(()=>{const MR={'でんきショック':'ひかりのたま','かみなり':'ほうこうのひかり','らいていのいかずち':'こうりんのひかり','らいごうのいかずち':'たいようのさばき','よいやみの雷':'よいやみのかげ','ほしぞらスパーク':'ほしぞらのやみ','ぱちぱちはり':'やみのはり','ほうでんはりせんぼん':'ヨルのはりせんぼん'},TY={'ビリット':'light','ビリトール':'light','ライゴウオウ':'light','ヨイヤミビリット':'dark','ビリハリ':'dark','ビリハリオン':'dark'};
+[...SP,...Object.values(EVO),...RARE].forEach(s=>{const o=s.n;if(!RN[o])return;s.t=TY[o];s.mv=s.mv.map(v=>[MR[v[0]]||v[0],v[1]=='electric'?s.t:v[1],v[2]]);ART3[RN[o]]=ART3[o];s.n=RN[o]});
+Object.keys(EVO).forEach(k=>{if(RN[k]){EVO[RN[k]]=EVO[k];delete EVO[k]}});
+['ヨルハリ','ヨルハリオン'].forEach(n=>{ART3[n]={...ART3[n],c:{...ART3[n].c,q:'#2a1a5a',s:'#c070ff',g:'#c070ff'}}});
+const dual=(k,t2,mn)=>{EVO[k].t2=t2;EVO[k].mv[1]=[mn,t2,70]};
+dual('ヒノガルド','light','せいなるほのお');dual('ミズレヴィア','dark','しんかいのやみ');dual('ユグハッパ','light','せいじゅのひかり');dual('ヒカリワシ','fire','たいようのほのお')})();
+const VOLC=[{n:'ヨウガンヘビ',t:'fire',hp:46,a:13,d:9,s:12,mv:MV('fire','マグマのキバ','ようがんのとぐろ')},{n:'カザンイノ',t:'fire',hp:58,a:14,d:11,s:8,mv:MV('fire','ほのおのとっしん','ばくえんのきば')},{n:'ホムラアルマ',t:'fire',hp:50,a:10,d:15,s:7,mv:MV('fire','ねつのころがり','もえるこうら')}];
+Object.assign(ART3,{
+'ヨウガンヘビ':{c:{a:'#7a2a1a',b:'#ff8a2a',o:'#ffd23a',y:'#ffe14a',g:'#ff7a1a'},s:[['p',[27,28,31,27,30,30],'a'],['e',20,26,10,4.5,'a'],['e',16,22,9,4,'a'],['e',20,26,6,1.2,'b'],['e',16,22,5,1.1,'b'],['p',[10,22,8,10,14,9,16,20],'a'],['e',11,17,1.2,5,'b'],['e',8,9,5,4,'a'],['e',4,10.5,3,2.2,'a'],['p',[9,6,10,1,13,5],'o'],['p',[12,6,15,2,16,7],'o'],['e',7.5,8,1.8,1.7,'y',1],['e',7.5,8,.5,1.3,'k',1]]},
+'カザンイノ':{c:{a:'#6a3a2a',b:'#c89a6a',t:'#fff0c8',o:'#ff7a1a',g:'#ff6a2a'},s:[['p',[28,18,31,15,30,20],'a'],['e',24,28,2.2,3.5,'a'],['e',12,28,2.2,3.5,'a'],['e',20,28,2.2,3.5,'a'],['e',16,28,2.2,3.5,'a'],['e',19,20,10,7.5,'a'],['p',[12,13,14,6,18,12,22,5,26,13,24,15],'o'],['e',9,18,7.5,6,'a'],['e',3.5,20,4.2,3,'b'],['e',1.8,19.5,.9,.8,'k',1],['p',[4,22,3,27,7,23],'t',1],['p',[7,23,7,27,10,23],'t',1],['p',[11,12,13,8,15,13],'a'],['e',9,16,1.5,1.7,'w',1],['e',9.2,16.3,.9,1.1,'k',1]]},
+'ホムラアルマ':{c:{a:'#c08a5a',s:'#7a4a3a',o:'#ff7a1a',b:'#f0d0a0',g:'#ff7a1a'},s:[['p',[28,24,31,22,30,27],'a'],['e',22,27,3,2.5,'a'],['e',12,27,3,2.5,'a'],['e',19,19,10.5,9,'s'],['e',14,19,.9,8,'o'],['e',19,19,.9,8.5,'o'],['e',24,19,.9,8,'o'],['p',[10,15,12,12,14,16],'a'],['e',9,20,6,5,'a'],['e',4,22,3.5,2.2,'a'],['e',2,22,.8,.7,'k',1],['e',8,19,1.6,1.8,'w',1],['e',8.3,19.3,1,1.2,'k',1]]}
+});
+const SPC={},spr=k=>SPC[k]||(SPC[k]=draw({n:k},32));
+const hum=o=>({c:{s:'#f0c8a0',k:'#1a1a24',m:'#a0504a',y:'#e8b030',bt:'#3a2a1a',...o.c},s:[...(o.pre||[]),['e',13,27.5,2.2,3.2,'p'],['e',19,27.5,2.2,3.2,'p'],['e',13,30.3,2.8,1.2,'bt'],['e',19,30.3,2.8,1.2,'bt'],['e',16,21,6.2,6.5,'c'],['e',16,24.2,6.2,1,'y',1],['e',9.8,21,2.2,5,'c'],['e',22.2,21,2.2,5,'c'],['e',9.8,26,1.7,1.7,'s'],['e',22.2,26,1.7,1.7,'s'],['e',16,11.5,5.8,5.6,'s'],['e',16,15,1.2,.5,'m',1],...(o.beard?[['e',16,16.5,4.3,3.6,'h']]:[]),['e',16,7.8,6.2,3.4,'h'],['e',10.4,11.5,1.7,3.6,'h'],['e',21.6,11.5,1.7,3.6,'h'],['e',13.4,12,1.1,1.5,'k',1],['e',18.6,12,1.1,1.5,'k',1],['e',13,11.4,.4,.4,'w',1],['e',18.2,11.4,.4,.4,'w',1],...(o.ex||[])]});
+Object.assign(ART3,{
+'P:hero':hum({c:{c:'#3a5fd0',p:'#223a8a',h:'#6a4a2a',st:'#aab8d0',wh:'#eef3ff',r:'#d8432a',bl:'#e8f0ff',cp:'#d8432a'},pre:[['e',16,22,8.5,7,'cp']],ex:[['e',16,6.6,6.6,4,'st'],['e',16,10,6.6,.9,'y',1],['p',[10,8,6,1,11.5,5.5],'wh'],['p',[22,8,26,1,20.5,5.5],'wh'],['e',16,16.9,5.4,1.6,'r'],['p',[25.5,10,27.5,10,27.5,24,25.5,24],'bl',1],['e',26.5,25,2.4,.9,'y',1],['e',6,22,3.2,4.6,'r'],['e',6,22,1.3,2.2,'y',1]]}),
+'P:elder':hum({beard:1,c:{c:'#7a4aa0',p:'#5a3a7a',h:'#eeeeee',wd:'#8a6a3a',orb:'#6fd0ff'},ex:[['p',[26,6,27.4,6,27.4,29,26,29],'wd',1],['e',26.7,5,2,2,'orb',1]]}),
+'P:merchant':hum({c:{c:'#e08a30',p:'#3a3a5a',h:'#4a2a14',ht:'#8a5a2a',ht2:'#5a3a1a',bp:'#6a4a2a'},pre:[['e',23,21,5,7,'bp']],ex:[['e',16,14.4,2.8,.8,'h',1],['p',[9,8,16,1.5,23,8],'ht'],['e',16,8.2,8.2,1.4,'ht2']]}),
+'P:girl':hum({c:{c:'#f08ab0',p:'#f08ab0',h:'#c0602a',r:'#e03a5a'},ex:[['e',10.5,6.5,1.8,1.8,'h'],['e',21.5,6.5,1.8,1.8,'h'],['e',16,4.8,2.2,1,'r',1]]}),
+'P:farmer':hum({beard:1,c:{c:'#5a8a3a',p:'#8a6a3a',h:'#6a4a2a',ht:'#e8c868',ht2:'#c8a848'},ex:[['p',[9,8,16,2,23,8],'ht'],['e',16,8.3,9,1.3,'ht2']]}),
+'P:boy':hum({c:{c:'#e8d060',p:'#3a7ad0',h:'#3a2a1a',cap:'#3a7ad0'},ex:[['e',16,6.8,6.2,3,'cap'],['e',11,9,3,1,'cap']]}),
+'P:granny':hum({c:{c:'#c06a8a',p:'#7a4a5a',h:'#d8d8d8',sh:'#8a4a6a'},ex:[['e',16,3.8,2.6,2.2,'h'],['e',16,16.8,6,1.8,'sh']]}),
+'P:rolf':hum({c:{c:'#2f7be0',p:'#2a3a5a',h:'#6a4a2a',cp:'#7a2a2a',bl:'#e8f0ff',r:'#d8432a'},pre:[['e',16,22,8.5,7.5,'cp']],ex:[['p',[22,3,23.4,3,23.4,22,22,22],'bl',1],['e',16,8.2,6.2,.9,'r',1]]})
+});
+Object.values(EVO).forEach(v=>{if(ART3[v.n])ART3[v.n].sz=v.lv>=20?1.25:1.12});
+const isRare=sp=>RARE.includes(sp),allSpecies=()=>[...SP,...Object.values(EVO),...RARE,...VOLC],wildMonster=l=>(curMap=='cave'||MAP[py][px]=='G')?mk(pick(VOLC),Math.max(10,l)):['roots','runes'].includes(curMap)?mk(pick(SP.filter(v=>['grass','water','light'].includes(v.t))),l):curMap=='forest'?mk(pick(Math.random()<RARE_RATE?RARE:SP.filter(v=>['grass','water','normal','light'].includes(v.t))),l):mk(pick(Math.random()<RARE_RATE?RARE:SP),l);
+const ELD=['..kkkkk','.kwwwww','kwwwwww','kwwffff','kwfkfff','kwwffff','kwwwwww','.kwwwww','.kwwwww','kpwwwww','kppwwww','kpppwww','kpyyyyy','kpppppp','.kkkkkk'],ELDP={k:'#1a1a24',w:'#eeeeee',f:'#f0c8a0',p:'#7a4aa0',y:'#e8b030'},
+MER=['..kkkkk','.khhhhh','khhhhhh','kHHHHHH','.kfffff','.kfkfff','.kffmmm','..kkfff','..kkrrr','kBkoooo','kBBoooo','kBBoooo','kBkyyyy','.kppp..','.kkkk..'],MERP={k:'#1a1a24',h:'#8a5a2a',H:'#5a3a1a',f:'#f0c8a0',m:'#4a2a14',r:'#d8432a',o:'#e08a30',B:'#6a4a2a',y:'#e8b030',p:'#3a3a5a'};
+let met=0;const NPCS=[{x:4,y:3,m:'jord',g:ELD,p:ELDP,st:'#6fd0ff',t:()=>{const L=met?["長老ヨルド:「灯は まだ きえておらぬ。いそがず きたえるのじゃ、旅人よ。」","「なかまが きずついたら、そこの 広間の 灯で やすむがよい。」"]:["長老ヨルド:「よく きたな。わしは この国の 長老 ヨルドじゃ。」","「世界樹の根で もえる『王国の灯』が きえかけておる。灯が きえれば、フィンブルの冬が この国を とざすじゃろう。」","「灯を よみがえらせるには、4つの 聖域を まもる 守護獣の ちからが いる。」","「まずは なかまを きたえ、モンスターを あつめるのじゃ。レベルを あげて、くさむらの さきを めざせ!」"];met=1;return L}}];
+NPCS.push({m:'forest',x:17,y:3,c:'#3a8756',h:'#d7f6c0',t:()=>['森の番人:「ここは古代樹の森。世界樹の灯に呼ばれた者だけが奥へ進める。」','「紅蓮岳の封印を解いたのなら、次はこの森に眠る守護獣の伝承を追うといい。」']});
+let px=7,py=7,inMap=false;const T=30,V=9,CL={'.':'#7bbf5a',g:'#3f8f3f',T:'#1f5a2e',p:'#d8c08a','~':'#3d7fd0',H:'#8a6a4a',M:'#7a7a86',S:'#ecd9a0',A:'#6a5a58',L:'#e8501a',G:'#5a3a30',C:'#3a2424',B:'#39303b',Q:'#8b552c',D:'#8a5a3a',R:'#a8452e',W:'#e0d0a8',O:'#6a4020',N:'#7bbf5a',f:'#c8a070',w:'#6a4a30',k:'#8a5a30',b:'#c07080',t:'#9a6a3a',x:'#e8d8b0',Z:'#21191f',E:'#4a261f'};
+const areaLv=(x,y)=>['roots','runes','altar'].includes(curMap)?21:curMap=='forest'?16:curMap=='cave'?12:x>=24&&y>=16?(y<24?12:14):y>=16?(x<8?10:11):x>=24?(y<8?10:9):(y<=2?3:x>=10&&y<=5?5:x<=5&&y<=8?3:x>=16&&x<24?6:x<=5&&y>=9?4:x>=10&&y<=10?6:8);
+function show(w){inMap=w;$('#field').style.display=w?'none':'flex';$('#world').style.display=w?'flex':'none'}
+function deco(x,ch,X,Y,hv){const r=n=>((hv*9301+n*49297)%233280)/233280,R=(c,a,b,w,h)=>{x.fillStyle=c;x.fillRect(X+a,Y+b,w,h)},ci=(c,a,b,s)=>{x.fillStyle=c;x.beginPath();x.arc(X+a,Y+b,s,0,6.3);x.fill()};
+switch(ch){
+case'.':for(let k=0;k<4;k++)R(k%2?'#8fd06a':'#69a84a',r(k)*26|0,r(k+9)*26|0,2,2);if(r(5)>.82){R('#fff',12,12,2,2);R('#ffd23a',12,12,1,1)}break;
+case'g':for(let k=0;k<6;k++){const a=3+k*4.5|0,b=6+(r(k)*6|0);R('#2e7a34',a,b,3,24-b);R('#5cb85a',a+1,b-2,2,8)}break;
+case'G':for(let k=0;k<6;k++){const a=3+k*4.5|0,b=6+(r(k)*6|0);R('#7a2a1a',a,b,3,24-b);R('#ff7a2a',a+1,b-2,2,6)}R('#ffd23a',(r(3)*24|0)+2,(r(4)*10|0)+4,2,2);break;
+case'T':R('#4a3220',13,20,5,9);ci('#1f5a2e',15,14,11);ci('#1f5a2e',9,17,7);ci('#1f5a2e',22,17,7);ci('#2f8a44',12,10,5);ci('#3fa856',10,9,2);break;
+case'~':R('#7fb8f0',4+(r(1)*12|0),8,8,2);R('#7fb8f0',12+(r(2)*8|0),19,8,2);R('#2d68b0',2,26,10,2);break;
+case'p':R('#bfa572',r(1)*24|0,r(2)*24|0,3,2);R('#b09560',r(3)*24|0,r(4)*24|0,2,2);R('#e8d8aa',r(5)*24|0,r(6)*24|0,2,1);break;
+case'M':x.fillStyle='#5a5a66';x.beginPath();x.moveTo(X+2,Y+29);x.lineTo(X+15,Y+3);x.lineTo(X+28,Y+29);x.fill();x.fillStyle='#8a8a98';x.beginPath();x.moveTo(X+15,Y+3);x.lineTo(X+28,Y+29);x.lineTo(X+17,Y+29);x.fill();R('#f0f0f8',11,9,8,5);break;
+case'S':R('#d4c080',r(1)*24|0,r(2)*24|0,3,2);R('#f4e4b0',r(3)*24|0,r(4)*24|0,2,2);break;
+case'A':R('#554644',r(1)*24|0,r(2)*24|0,3,2);R('#7a6a68',r(3)*24|0,r(4)*24|0,2,2);break;
+case'L':R('#ffb02e',4+(r(1)*14|0),6+(r(2)*14|0),9,3);R('#ffe9a0',4+(r(3)*18|0),18+(r(4)*8|0),5,2);break;
+case'C':R('#2a1818',r(1)*24|0,r(2)*24|0,4,3);R('#6a2a1a',r(3)*24|0,r(4)*24|0,2,2);break;
+case'B':R('#423843',0,0,30,30);R('#6e5d69',3,2,24,5);R('#221b25',7,7,16,23);R('#ae7951',4,4,3,22);break;
+case'Q':R('#3e333a',7,19,16,11);R('#c89a59',5,17,20,4);R('#e9b86c',10,9,10,10);R('#ff5d1b',11,4,8,13);R('#fff1a1',13,6,4,9);break;
+case'Z':R('#49343b',2,2,26,26);R('#68505a',2,2,26,4);R('#171016',4,20,22,7);break;
+case'E':R('#2c1c1a',3,3,24,26);R('#c0582a',3,3,24,5);R('#0d090b',8,9,14,21);R('#fca33c',3,23,5,6);break;
+case'H':R('#6a5a4a',4,18,22,11);R('#8a7a68',4,18,22,3);R('#4a3a2a',4,26,22,3);R('#ff7a1a',11,3,9,15);R('#ffd23a',13,8,5,10);R('#fff7c0',15,12,2,6);break;
+case'R':R('#8a3220',0,0,30,3);for(let k=0;k<3;k++)R('#7a2a18',0,8+k*8,30,2);for(let k=0;k<6;k++)R('#c2573a',k*6+(k%2?3:0),4+(k%3)*8,3,2);break;
+case'W':R('#c8b88e',0,10,30,1);R('#c8b88e',0,20,30,1);R('#6a4a30',7,6,16,13);R('#9fd0f5',9,8,12,9);R('#6a4a30',14,8,2,9);R('#cfe8ff',10,9,3,2);break;
+case'O':R('#e0d0a8',0,0,30,30);R('#4a2a10',4,2,22,28);R('#7a4a22',7,5,16,25);R('#5a3414',14,5,2,25);R('#e8c050',19,18,2,2);break;
+case'N':R('#8a6a3a',13,12,4,16);R('#c8a06a',4,3,22,12);R('#6a4a20',4,3,22,2);R('#6a4a20',8,8,14,1);R('#6a4a20',8,11,10,1);break;
+case'D':if(keys)break;R('#3a2a1a',2,2,26,26);for(let k=0;k<4;k++)R('#6a4a2a',4+k*6,3,4,24);R('#c0402a',3,13,24,4);R('#e8c050',13,12,4,6);break;
+case'f':R('#b08a5a',0,14,30,1);R('#b08a5a',r(1)*28|0,0,1,14);R('#b08a5a',r(2)*28|0,15,1,15);break;
+case'w':R('#5a3a24',0,22,30,2);R('#7a5a3a',0,0,30,3);break;
+case'x':R('#c8b890',4,10,22,14);R('#a89870',4,10,22,2);break;
+case'b':R('#c07080',3,4,24,22);R('#fff',4,4,22,8);R('#e0a0b0',4,14,22,2);break;
+case'k':for(let k=0;k<4;k++)R(['#c0402a','#3a7ad0','#e8b030','#4cb84c'][k],3+k*6,6,5,18);R('#5a3a1a',2,24,26,3);break;
+case't':R('#b88a50',2,4,26,12);R('#8a6030',4,16,3,10);R('#8a6030',23,16,3,10);break}}
+function drawMap(){const x=$('#map').getContext('2d'),vx=Math.min(Math.max(px-4,0),MAP[0].length-V),vy=Math.min(Math.max(py-4,0),MAP.length-V);
+for(let j=0;j<V;j++)for(let i=0;i<V;i++){let ch=MAP[vy+j][vx+i];const X=i*T,Y=j*T;x.fillStyle=ch=='D'&&keys?CL.p:CL[ch];x.fillRect(X,Y,T,T);deco(x,ch,X,Y,(vx+i)*7+(vy+j)*13+(vx+i)*(vy+j));
+if(['roots','runes','altar'].includes(curMap)){x.fillStyle=ch==='T'?'#254c34':ch==='S'?'#c3ac70':'#425746';x.fillRect(X,Y,T,T);x.strokeStyle=ch==='T'?'#547c52':'#8b9e70';x.strokeRect(X+2,Y+2,26,26);if(ch==='T'){x.fillStyle='#80603a';x.fillRect(X+12,Y+13,6,17);x.fillStyle='#36794d';x.fillRect(X+4,Y+2,22,17)}if(curMap==='altar'&&ch==='S'){x.fillStyle='rgba(238,219,130,.35)';x.fillRect(X+7,Y+2,16,26)}}
+if(curMap==='forest' && ch==='T'){x.fillStyle='#244b30';x.fillRect(X+11,Y+16,8,14);x.fillStyle='#377a42';x.beginPath();x.arc(X+15,Y+12,12,0,Math.PI*2);x.fill();x.fillStyle='#65a85b';x.fillRect(X+7,Y+6,7,4);x.fillRect(X+17,Y+11,6,3)}
+if(curMap==='forest' && ch==='g'){x.fillStyle='#286b36';for(let k=0;k<4;k++)x.fillRect(X+3+k*7,Y+8+(k%2)*4,3,13)}
+if(curMap==='cave' && vx+i>=14 && vx+i<=19 && vy+j<=6 && ch==='C'){
+ x.fillStyle='rgba(165,118,91,.22)';x.fillRect(X,Y,30,30);
+ x.strokeStyle='rgba(225,166,97,.3)';x.strokeRect(X+2,Y+2,26,26);
+ if(vy+j===3){x.fillStyle='#c98c43';x.fillRect(X+10,Y+4,10,3)}
+}ch='';
+if(ch=='g'){x.fillStyle='#2a6a2a';for(let k=0;k<3;k++)x.fillRect(X+5+k*9,Y+7,4,15)}
+if(ch=='T'){x.fillStyle='#143d20';x.fillRect(X+6,Y+3,18,20);x.fillStyle='#4a3020';x.fillRect(X+12,Y+23,6,7)}
+if(ch=='~'){x.fillStyle='#8fc0f0';x.fillRect(X+5,Y+11,10,3)}
+if(ch=='M'){x.fillStyle='#5a5a66';x.fillRect(X+4,Y+10,22,16);x.fillStyle='#a8a8b4';x.fillRect(X+10,Y+4,10,8)}
+if(ch=='G'){x.fillStyle='#b8401a';for(let k=0;k<3;k++)x.fillRect(X+5+k*9,Y+7,4,15)}
+if(ch=='L'){x.fillStyle='#ffd23a';x.fillRect(X+6,Y+8,6,3);x.fillRect(X+18,Y+19,6,3)}
+if(ch=='D'&&!keys){x.fillStyle='#3a2a1a';for(let k=0;k<4;k++)x.fillRect(X+3+k*7,Y+3,4,24);x.fillStyle='#c0402a';x.fillRect(X+3,Y+13,24,4)}
+if(ch=='R'){x.fillStyle='#7a2e1e';for(let k=0;k<3;k++)x.fillRect(X,Y+6+k*9,T,2)}
+if(ch=='W'){x.fillStyle='#8fc0f0';x.fillRect(X+9,Y+8,12,10)}
+if(ch=='O'){x.fillStyle='#3a2410';x.fillRect(X+8,Y+4,14,26)}
+if(ch=='N'){x.fillStyle='#8a6a3a';x.fillRect(X+13,Y+12,4,16);x.fillRect(X+5,Y+4,20,10)}
+if(ch=='b'){x.fillStyle='#fff';x.fillRect(X+4,Y+4,22,8)}
+if(ch=='k'){for(let k=0;k<4;k++){x.fillStyle=['#c0402a','#3a7ad0','#e8b030','#4cb84c'][k];x.fillRect(X+3+k*6,Y+6,5,18)}}
+if(ch=='t'){x.fillStyle='#b88a50';x.fillRect(X+2,Y+4,26,12)}
+if(ch=='H'){x.fillStyle='#ffb02e';x.fillRect(X+10,Y+5,10,16);x.fillStyle='#fff0a0';x.fillRect(X+13,Y+11,4,8)}}
+if(curMap==='runes')SHRINE_SWITCHES.forEach((q,i)=>{const ii=q.x-vx,jj=q.y-vy;if(ii>=0&&jj>=0&&ii<V&&jj<V){x.fillStyle=shrineActivated.includes(i)?'#e9f7a0':'#65e3b3';x.fillRect(ii*T+9,jj*T+6,12,19);x.fillStyle='#173d32';x.fillRect(ii*T+13,jj*T+9,4,10)}});
+if(curMap==='altar'&&!shrineClear){const i=9-vx,j=6-vy;if(i>=0&&j>=0&&i<V&&j<V){x.fillStyle='#d5b869';x.fillRect(i*T+4,j*T+23,23,6);x.drawImage(spr('ユグハッパ'),i*T-2,j*T-10,34,40)}}
+NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
+const ox=(px-vx)*T,oy=(py-vy)*T;x.fillStyle='rgba(0,0,0,.25)';x.fillRect(ox+4,oy+28,22,3);const by=oy-(px+py)%2;
+x.drawImage(spr('P:hero'),ox-1,by-3)}
+let AC,mute=false,bgmT=0,curBgm='';
+const AU=()=>{if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state=='suspended')AC.resume();return AC},NF=n=>440*2**((n-69)/12);
+function tone(f,at,d,type='square',v=.06,f2){const a=AU();if(!a||mute)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,at);if(f2)o.frequency.exponentialRampToValueAtTime(f2,at+d);g.gain.setValueAtTime(v,at);g.gain.exponentialRampToValueAtTime(.0001,at+d);o.connect(g).connect(a.destination);o.start(at);o.stop(at+d+.02)}
+function nz(at,d,v,fc,type='lowpass',f2){const a=AU();if(!a||mute)return;const n=Math.floor(a.sampleRate*d),buf=a.createBuffer(1,n,a.sampleRate),da=buf.getChannelData(0);for(let i=0;i<n;i++)da[i]=Math.random()*2-1;const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=buf;f.type=type;f.frequency.setValueAtTime(fc,at);if(f2)f.frequency.exponentialRampToValueAtTime(f2,at+d);g.gain.setValueAtTime(v,at);g.gain.exponentialRampToValueAtTime(.0001,at+d);s.connect(f).connect(g).connect(a.destination);s.start(at)}
+function se(k,t){const a=AU();if(!a||mute)return;const n=a.currentTime,seq=(L,w,ty,v,d)=>L.forEach((f,i)=>tone(f,n+i*w,d||w*1.5,ty,v)),
+H={fire:()=>{nz(n,.45,.14,1800,'lowpass',200);tone(220,n,.4,'sawtooth',.05,600)},water:()=>{nz(n,.5,.12,2500,'bandpass',500);tone(900,n,.35,'sine',.07,300)},grass:()=>seq([700,850,1000,1150],.07,'triangle',.07),electric:()=>{seq([1400,1200,1000,800,600],.04,'square',.06);nz(n,.3,.1,4000,'highpass')},normal:()=>{nz(n,.18,.18,1200,'lowpass');tone(140,n,.18,'sine',.1,60)},light:()=>seq([1047,1319,1568,2093],.06,'sine',.06),dark:()=>{nz(n,.4,.12,600,'lowpass',120);tone(120,n,.4,'sawtooth',.05,60)}},
+S={ui:()=>tone(660,n,.06,'square',.04),step:()=>tone(180,n,.04,'triangle',.03),enc:()=>seq([300,420,540,660],.08,'square',.06),hit:()=>(H[t]||H.normal)(),
+win:()=>seq([523,659,784,1047],.13,'square',.06,.3),lvup:()=>seq([523,659,784,1047,1319],.07,'square',.05),evo:()=>{tone(200,n,1.5,'sawtooth',.06,1600);[523,659,784].forEach(f=>tone(f,n+1.5,.9,'triangle',.07))},
+ball:()=>tone(500,n,.3,'sine',.08,1200),shake:()=>tone(220,n,.12,'square',.07),catch:()=>seq([784,988,1175,1568],.1,'triangle',.08,.25),fail:()=>tone(300,n,.3,'sawtooth',.06,100),
+heal:()=>seq([523,659,784,988],.09,'triangle',.07,.2),buy:()=>{tone(988,n,.07,'square',.05);tone(1319,n+.07,.12,'square',.05)},lose:()=>seq([392,330,262,196],.2,'sawtooth',.05,.3)};S[k]&&S[k]()}
+const TR={field:{bpm:112,l:[72,0,76,0,79,0,76,0,77,0,81,0,79,0,76,0,74,0,77,0,81,0,77,0,76,0,74,0,72,0,0,0],b:[48,0,0,0,48,0,0,0,53,0,0,0,53,0,0,0,55,0,0,0,55,0,0,0,48,0,0,0,43,0,0,0]},
+battle:{bpm:150,l:[69,72,76,72,69,72,76,72,67,71,74,71,67,71,74,71,65,69,72,69,65,69,72,69,64,68,71,68,64,68,71,76],b:[45,0,45,0,45,0,45,0,43,0,43,0,43,0,43,0,41,0,41,0,41,0,41,0,40,0,40,0,40,0,40,0]},
+boss:{bpm:170,l:[62,0,65,0,69,0,68,0,62,0,65,0,70,0,69,0,58,0,62,0,65,0,64,0,57,0,61,0,64,0,65,0],b:[38,38,0,38,38,0,38,0,38,38,0,38,38,0,41,0,34,34,0,34,34,0,34,0,33,33,0,33,33,0,36,0]}};
+function bgm(name){if(curBgm==name)return;curBgm=name;clearInterval(bgmT);if(!name||mute)return;const a=AU();if(!a)return;const T=TR[name],st=60/T.bpm/2;let i=0,t=a.currentTime+.1;bgmT=setInterval(()=>{while(t<a.currentTime+.3){const k=i%32;if(T.l[k])tone(NF(T.l[k]),t,st*.9,'square',.03);if(T.b[k])tone(NF(T.b[k]),t,st*1.8,'triangle',.08);t+=st;i++}},100)}
+document.addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('#pad button[data-d]'))se('ui')},true);
+$('#snd').onclick=()=>{mute=!mute;$('#snd').textContent=mute?'♪×':'♪';if(mute)clearInterval(bgmT);else{const w=curBgm;curBgm='';bgm(w)}};
+let gold=0,pot=3,keys=0,bossFoe=null,inBt=0;const KEY='valheim-save1';
+function act(){if(!inMap){const b=$('#menu button');if(b)b.click();return}
+const tx=px+face[0],ty=py+face[1],n=NPCS.find(n=>(n.m||'world')==curMap&&n.x==tx&&n.y==ty);
+if(n){talk(n.t(),0,n.s?shop:n.b===2?shrineBossGo:n.b?bossGo:0);return}
+const v=NOTES[curMap+':'+tx+','+ty];
+if(v=='bed'){se('heal');party.forEach(m=>m.hp=m.max);info();talk(['ぐっすり ねむった! なかまが かいふくした!']);return}
+if(v)talk(v)}
+function openMenu(){if(!inMap)return;inMap=false;mainMenu()}
+function mainMenu(){$('#msg').textContent=`メニュー\nしょじきん ${gold}G　カギ ${keys}/4`;menu([["ステータス",stMenu],["図鑑",dexMenu],["あいしょう",chartMenu],["牧場",farmMenu],["アイテム",itMenu],["セーブ",saveGame],["とじる",goMap]])}
+function dexMenu(){const L=allSpecies(),k=L.filter(s=>dex[s.n]);$('#msg').textContent=`モンスター図鑑　${k.length} / ${L.length}\nモンスターを選ぶと姿・進化・技を確認できる。`;menu([['全モンスター図鑑（グラフィック）',dexGallery,'wide'],...L.map((s,i)=>[`${String(i+1).padStart(2,'0')} ${s.n}<small>${TN[s.t]||s.t}${s.t2?'/'+(TN[s.t2]||s.t2):''}　${dex[s.n]?'発見済':'未発見'}</small>`,()=>dexDetail(s)]),['もどる',mainMenu,'wide']])}
+function dexLine(sp){const predecessors=Object.entries(EVO).filter(([n,e])=>e.n===sp.n).map(([n])=>n);let root=sp.n;while(true){const prev=Object.entries(EVO).find(([n,e])=>e.n===root);if(!prev)break;root=prev[0]}const chain=[root];while(EVO[chain[chain.length-1]])chain.push(EVO[chain[chain.length-1]].n);return chain}
+function dexSpecies(n){return allSpecies().find(s=>s.n===n)||Object.values(EVO).find(s=>s.n===n)}
+function dexArt(sp,size=94){try{return draw(sp,size,false)}catch(e){const t=document.createElement('span');t.textContent='画像なし';return t}}
+function dexGallery(){const L=allSpecies();$('#msg').textContent=`グラフィック図鑑　全${L.length}種類\n未発見のモンスターも見た目を確認できる。`;const m=$('#menu');m.innerHTML='';m.classList.add('dex-gallery');for(const sp of L){const b=document.createElement('button');b.className='dex-card';const a=dexArt(sp,88);a.classList.add('dex-sprite');b.append(a);const name=document.createElement('strong');name.textContent=sp.n;b.append(name);const sub=document.createElement('small');sub.textContent=(TN[sp.t]||sp.t)+(sp.t2?'/'+(TN[sp.t2]||sp.t2):'');b.append(sub);b.onclick=()=>{m.classList.remove('dex-gallery');dexDetail(sp)};m.append(b)}const back=document.createElement('button');back.textContent='図鑑メニューへ';back.className='wide';back.onclick=()=>{m.classList.remove('dex-gallery');dexMenu()};m.append(back)}
+function dexDetail(sp){const chain=dexLine(sp),m=$('#menu');m.classList.remove('dex-gallery');m.innerHTML='';$('#msg').textContent=`${sp.n}　タイプ：${TN[sp.t]||sp.t}${sp.t2?'/'+(TN[sp.t2]||sp.t2):''}\n進化：${chain.map((n,i)=>i?`Lv.${EVO[chain[i-1]].lv||12} → ${n}`:n).join(' / ')}\n基本技：${sp.mv.map(v=>`${v[0]}（威力${v[2]}）`).join('、')}\nレベル習得：${(LEARN[sp.t]||LEARN.normal).map(v=>`Lv.${v[0]} ${v[1]}（威力${v[2]}）`).join('、')}`;
+const panel=document.createElement('div');panel.className='dex-evolution';for(let i=0;i<chain.length;i++){const species=dexSpecies(chain[i]);if(!species)continue;const unit=document.createElement('div');unit.className='dex-stage';unit.append(dexArt(species,94));const label=document.createElement('b');label.textContent=species.n;unit.append(label);const lev=document.createElement('small');lev.textContent=i===0?'進化前':`Lv.${EVO[chain[i-1]].lv||12} 進化`;unit.append(lev);unit.onclick=()=>dexDetail(species);panel.append(unit)}m.append(panel);const b=document.createElement('button');b.textContent='グラフィック図鑑へ戻る';b.className='wide';b.onclick=dexGallery;m.append(b);const b2=document.createElement('button');b2.textContent='図鑑メニューへ';b2.className='wide';b2.onclick=dexMenu;m.append(b2)}
+function farmMenu(){$('#msg').textContent=`牧場　${storage.length}体\nなかまが ${PARTY_MAX}体のときに つかまえた仲間は ここに あずけられる。`;
+menu([...storage.map((m,i)=>[`${m.sp.n} Lv${m.lv}<small>HP ${m.hp}/${m.max}　てもちへ</small>`,()=>{if(party.length>=PARTY_MAX){$('#msg').textContent='てもちが いっぱいだ!';return}storage.splice(i,1);party.push(m);info();farmMenu()}]),['てもちを あずける',()=>{if(party.length<=1){$('#msg').textContent='てもちは 1たい いじょう ひつようだ!';return}$('#msg').textContent='あずける なかまを えらぼう。';menu([...party.map((m,i)=>[`${m.sp.n} Lv${m.lv}`,()=>{storage.push(m);party.splice(i,1);if(!party.includes(cur))cur=party.find(x=>x.hp>0)||party[0];info();farmMenu()}]),['もどる',farmMenu,'wide']])}],['もどる',mainMenu,'wide']])}
+function chartMenu(){$('#msg').textContent='タイプ あいしょう\nほのお→くさ→みず→ほのお (3すくみ)\nひかり⇄やみ (おたがいに よわい)';menu([['もどる',mainMenu,'wide']])}
+function mvP(m,d){const i=party.indexOf(m),j=i+d;if(j>=0&&j<party.length)[party[i],party[j]]=[party[j],party[i]];info();stDetail(m);$('#msg').textContent+=`\n${party.indexOf(m)+1}ばんめに なった`}
+function stMenu(){$('#msg').textContent='だれを みる?';menu([...party.map(m=>[`${m.sp.n} Lv${m.lv}<small>HP ${m.hp}/${m.max}</small>`,()=>stDetail(m)]),["もどる",mainMenu,'wide']])}
+function stDetail(m){$('#msg').textContent=`${m.sp.n} Lv${m.lv} (${TN[m.sp.t]}${m.sp.t2?'/'+TN[m.sp.t2]:''})\nHP ${m.hp}/${m.max}　EXP ${m.xp}/${m.lv*10}\nこうげき ${Math.round(st(m,'a'))} ぼうぎょ ${Math.round(st(m,'d'))} すばやさ ${m.sp.s}\nわざ: ${m.sp.mv.map(v=>v[0]).join('、')}`;menu([["↑ うえへ",()=>mvP(m,-1)],["↓ したへ",()=>mvP(m,1)],["もどる",stMenu,'wide']])}
+function itMenu(){$('#msg').textContent=`もちもの\nきずぐすり ×${pot}${keys?'\nほのおの封印のカギ':''}`;menu([[`きずぐすり<small>HP30かいふく</small>`,potMenu],["もどる",mainMenu]])}
+function potMenu(){if(!pot){$('#msg').textContent='きずぐすりが ない!';return}$('#msg').textContent='だれに つかう?';
+menu([...party.map(m=>[`${m.sp.n}<small>HP ${m.hp}/${m.max}</small>`,()=>{if(m.hp>=m.max){$('#msg').textContent='HPは まんたんだ!';return}pot--;m.hp=Math.min(m.max,m.hp+30);$('#msg').textContent=`${m.sp.n}の HPが かいふくした!`;setTimeout(itMenu,900)}]),["もどる",itMenu,'wide']])}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({p:party.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),b:storage.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),d:dex,c:party.indexOf(cur),balls,pot,gold,px:curMap=='world'?px:EXIT[curMap][0],py:curMap=='world'?py:EXIT[curMap][1],met,keys,shrineClear,shrineActivated}));return 1}catch(e){return 0}}
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+function saveGame(){$('#msg').textContent=save()?'セーブした!':'セーブに しっぱいした…(このブラウザでは つかえないかも)';menu([["もどる",mainMenu,'wide']])}
+function cont(){const s=load();if(!s)return;const f=n=>(n=RN[n]||n,0)||SP.find(x=>x.n==n)||Object.values(EVO).find(x=>x.n==n)||RARE.find(x=>x.n==n)||VOLC.find(x=>x.n==n);party=s.p.map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));storage=(s.b||[]).map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));dex=s.d||{};party.forEach(m=>markDex(m.sp.n));party.forEach(m=>{if(!m.learned)m.learned=teach(m)});storage.forEach(m=>{if(!m.learned)m.learned=teach(m)});cur=party[Math.max(0,s.c)];({balls,pot,gold,px,py,met}=s);keys=s.keys||0;shrineClear=!!s.shrineClear;shrineActivated=s.shrineActivated||[];if(shrineClear){const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1)}if(keys){const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1)}curMap='world';MAP=WORLD;goMap()}
+NPCS.push({x:27,y:9,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#2f7be0'},t:()=>['旅の剣士ロルフ:「東の湖の むこうには 光の神殿が あるらしい。」','「南の 森には 世界樹の 守護獣が ねむっていると きく。強い モンスターも おおいぞ。」','「道ばたの 灯の ほこらで やすめるから、むりは するなよ。」']});
+NPCS.push({x:9,y:7,g:MER,p:{...MERP,h:'#c0402a',H:'#8a2a1a',m:'#f0c8a0',o:'#f08ab0',B:'#f08ab0',r:'#ffd070'},t:()=>['少女ミナ:「あなたが ひろわれた 夜は、灯が とても あかるく もえたって おばあちゃんが いってたよ。」','「ヨルドさんは やさしいけど、ときどき 灯を みつめて さみしそうなの。」']});
+NPCS.push({x:2,y:8,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#5a8a3a'},t:()=>['農夫ハルド:「むかしは 灯守さまが いたそうだが、いつからか だれも おぼえとらん。」','「どうして わすれてしまったのかのう…」']});
+NPCS.push({x:11,y:6,g:MER,p:{...MERP,h:'#3a7ad0',H:'#2a5a9a',m:'#f0c8a0',o:'#e8d060',B:'#e8d060'},t:()=>['少年トム:「モンスターと なかまになるの、すごいね! ぼくも そだててみたい!」','「くさむらは 広間の まわりが よわい モンスターだよ。」']});
+NPCS.push({x:1,y:6,g:ELD,p:{...ELDP,w:'#d8d8d8',p:'#c06a8a'},t:()=>['おばあさん:「あんたは この村の 子じゃ。ヨルドが 大切に そだてた 子じゃよ。」','「旅に でるなら、ヨルドの 家に よっていきなされ。」']});
+NPCS.push({x:8,y:6,s:1,g:MER,p:MERP,t:()=>["商人ブラギ:「いらっしゃい! 旅には 備えが かんじんだよ。」"]});
+NPCS.push({x:9,y:6,m:'altar',b:2,sp:SHRINE_BOSS,t:()=>['翠樹王ヴェルディオン:「灯を継ぐ者よ。命を守る覚悟を示せ。」','大樹の枝角が金色に輝き、守護獣が立ち上がった！']});
+NPCS.push({x:17,y:2,m:'cave',b:1,sp:BOSS,t:()=>["ほのおの祭壇を 魔竜ゴルヴァザークが うばっている!","魔竜ゴルヴァザーク:「ククク…よくぞ ここまで きたな。灯は わしのものだ。ほのおに のまれて きえるがいい!」"]});
+const HM={'4,3':'P:elder','27,9':'P:rolf','8,6':'P:merchant','9,7':'P:girl','2,8':'P:farmer','11,6':'P:boy','1,6':'P:granny'};NPCS.forEach(n=>{const k=HM[n.x+','+n.y];if(k)n.sp={n:k}});
+const GOODS=[["きずぐすり",25,()=>pot++]];
+function shop(){$('#msg').textContent=`なにを かう?\nしょじきん ${gold}G\nきずぐすり ×${pot}`;
+menu([...GOODS.map(([n,p,f])=>[`${n}<small>${p}G</small>`,()=>{if(gold<p){$('#msg').textContent='おかねが たりないよ!';setTimeout(shop,900);return}gold-=p;f();se('buy');info();shop()}]),["やめる",goMap,'wide']])}
+function fx(t,el){if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,C={fire:['#ff7a1a','#ffd23a','#ff4a1a'],water:['#3d9be0','#8fd0ff','#ffffff'],grass:['#4cc04c','#9ddf5a','#2e8a3a'],electric:['#ffe14a','#fff7a0','#ffffff'],normal:['#ffffff','#dddddd','#aaaaaa'],light:['#fff7b0','#ffffff','#ffe14a'],dark:['#6a3a9a','#2a1a40','#c070ff']}[t]||['#fff','#ddd','#aaa'];
+const mkEl=st=>{const s=document.createElement('i');Object.assign(s.style,{position:'fixed',pointerEvents:'none',zIndex:9},st);document.body.append(s);return s};
+for(let i=0;i<16;i++){const z=6+Math.random()*9,s=mkEl({left:cx+'px',top:cy+'px',width:z+'px',height:z+'px',background:C[i%3],borderRadius:t=='grass'?'2px':t=='normal'?'0':'50%',boxShadow:`0 0 8px ${C[0]}`}),a=Math.random()*6.28,d=30+Math.random()*50,dx=Math.cos(a)*d,dy=t=='fire'?-d-15:t=='water'?d:Math.sin(a)*d;
+s.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${t=='grass'?360:0}deg) scale(.2)`,opacity:0}],{duration:450+Math.random()*300,easing:'ease-out'}).onfinish=()=>s.remove()}
+if(t=='electric'){const b=mkEl({left:cx-22+'px',top:cy-70+'px',width:'44px',height:'140px',background:'#fff7a0',clipPath:'polygon(50% 0,18% 52%,44% 52%,28% 100%,82% 40%,56% 40%,72% 0)',filter:'drop-shadow(0 0 6px #ffe14a)'});b.animate([{opacity:1},{opacity:.1},{opacity:1},{opacity:0}],{duration:450}).onfinish=()=>b.remove()}
+if(t=='normal'){const b=mkEl({left:cx-50+'px',top:cy-3+'px',width:'100px',height:'6px',background:'#fff',transform:'rotate(-35deg)',boxShadow:'0 0 8px #fff'});b.animate([{opacity:1,clipPath:'inset(0 100% 0 0)'},{opacity:1,clipPath:'inset(0 0 0 0)'},{opacity:0,clipPath:'inset(0 0 0 0)'}],{duration:350}).onfinish=()=>b.remove()}}
+function shrineBossGo(){if(shrineClear)return goMap();bossFoe=mk(SHRINE_BOSS,23);bossFoe.boss=1;enc('翠樹王ヴェルディオンが目覚めた！')}
+async function shrineBossWin(){bgm('');se('win');await say('翠樹王ヴェルディオンを乗り越えた！');await gain(cur,23*18);shrineClear=true;keys=Math.max(keys,2);gold+=600;const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1);party.forEach(m=>m.hp=m.max);info();save();talk(['翠樹王:「見事だ。お前の灯は命を守るために燃えている。」','世界樹の加護を得た！ 仲間のHPが全回復した。600Gを手に入れた。','古代の記憶が流れ込む。千年前、初代灯守スリュムガルドは妹シグリを失った。','「灯は命を燃やしていた……」真実の断片を胸に、次の聖域へ進もう。'])}
+function bossGo(){if(bossFoe)return;bossFoe=mk(BOSS,11);bossFoe.boss=1;enc('魔竜が おそいかかってきた!')}
+async function bossWin(){bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*16);keys=1;gold+=300;{const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1);}curMap='world';MAP=WORLD;px=34;py=7;face=[0,1];info();save();await say('ほのおの封印のカギを てにいれた! 南の 門が ひらくぞ! 300Gも てにいれた!',1800);menu([["洞窟の入り口へ",goMap]])}
+function talk(L,i=0,fn){if(i>=L.length)return fn?fn():goMap();inMap=false;$('#msg').textContent=L[i];menu([["つぎへ",()=>talk(L,i+1,fn)]])}
+function goMap(){inBt=0;bgm('field');show(true);menu([]);info();drawMap();$('#msg').textContent=met?curMap=='cave'?'紅蓮岳・灼熱の迷宮。分かれ道を抜け、燭台が照らす最奥の祭壇へ進もう。洞窟の敵との遭遇率は低めだ。':curMap=='forest'?'第二章・古代樹の森。北の世界樹の神殿へ向かおう。':curMap=='roots'?'世界樹の神殿・根の迷宮。北の階段を探そう。':curMap=='runes'?'精霊の回廊。3つのルーンを順番に踏もう。':curMap=='altar'?'生命の祭壇。翠樹王が待っている。':'くさむらで モンスターに であえる。まれに 色ちがいの ★レアモンスターも あらわれるぞ! 広間の灯で なかまが かいふくするぞ。':'村の 右上の 家に すむ 長老ヨルドに はなしかけてみよう。「決定」ボタンで 話せるよ。'}
+async function enc(m){inMap=false;bgm('');se('enc');await say(m||'くさむらから なにかが とびだした!');battle()}
+function mv(dx,dy){if(!inMap)return;face=[dx,dy];const nx=px+dx,ny=py+dy,ch=MAP[ny]?.[nx];const npc=NPCS.find(n=>(n.m||'world')==curMap&&n.x==nx&&n.y==ny);if(npc){if(npc.b){stop();talk(npc.t(),0,npc.b===2?shrineBossGo:bossGo)}return}if(!ch||ch=='T'||ch=='~'||'MLRWwkbtNZBQ'.includes(ch))return;if(ch=='D'&&!keys){$('#msg').textContent='封印の門だ。ほのおの封印のカギが ひつようだ…';return}px=nx;py=ny;se('step');const sw=SHRINE_SWITCHES.findIndex(q=>q.m===curMap&&q.x===px&&q.y===py);if(sw>=0&&!shrineActivated.includes(sw)){if(sw===shrineActivated.length){shrineActivated.push(sw);se('light');$('#msg').textContent=`ルーン ${sw+1}/3 が輝いた！`;if(shrineActivated.length===3)$('#msg').textContent='三つのルーンが共鳴した！ 生命の祭壇への道が開いた。'}else{shrineActivated=[];$('#msg').textContent='ルーンの順番が違う！ 光が消えてしまった…'}}const wp=DOORS[curMap+':'+px+','+py];if(wp){if(curMap==='runes'&&wp[0]==='altar'&&shrineActivated.length<3){$('#msg').textContent='祭壇の門は閉ざされている。3つのルーンを順番に起動しよう。';return}curMap=wp[0];MAP=MAPS[curMap];px=wp[1];py=wp[2];drawMap();$('#msg').textContent=curMap=='cave'?'紅蓮岳・灼熱の洞窟に 足をふみいれた…':curMap=='forest'?'第二章・古代樹の森。木々の奥から不思議な光が差している…':['roots','runes','altar'].includes(curMap)?'世界樹の神殿。古いルーンが静かに光る…':curMap=='world'?'フィールドに もどった。':'家に 入った。';return}drawMap();
+if(ch=='H'){se('heal');party.forEach(m=>m.hp=m.max);info();$('#msg').textContent='世界樹の灯の ぬくもりで なかまが かいふくした!';return}
+if((ch=='g'||ch=='G'||curMap=='cave'&&ch=='C')&&Math.random()<(curMap==='cave'?.105:['roots','runes'].includes(curMap)?.11:curMap==='forest'?.14:.18))enc()}
+let hold;const stop=()=>{clearInterval(hold);hold=0};
+document.querySelectorAll('#pad button[data-d]').forEach(b=>{const d=b.dataset.d.split(',').map(Number);
+b.onpointerdown=e=>{e.preventDefault();stop();mv(...d);hold=setInterval(()=>inMap?mv(...d):stop(),150)};
+['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,stop));
+b.oncontextmenu=e=>e.preventDefault();b.onclick=e=>{if(e.detail===0)mv(...d)}});
+$('#mbtn').onclick=()=>{stop();openMenu()};$('#abtn').onclick=()=>{stop();act()};
+addEventListener('keydown',e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(d){e.preventDefault();mv(...d)}else if(e.key=='Enter'||e.key=='z'){e.preventDefault();act()}});
+function start(){info();$('#me').innerHTML='';$('#foe').innerHTML='';SP.slice(0,3).forEach(sp=>$('#foe').append(draw(sp,96)));
+$('#msg').textContent='ヴァルハイム王国の 灯が きえかけている…。たびだつ なかまを えらぼう!';
+menu([...(load()?[["つづきから",cont,'wide']]:[]),...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])])}
+start();
+// 初回起動時の演出。セーブがある場合も毎回ロゴを表示し、続きから選べる。
+const INTRO=[
+{kind:'studio',html:'<div class="sub">PRESENTED BY</div><div class="studio">MOCHI GAME</div><div class="sub">A FANTASY ROLE-PLAYING GAME</div>',button:'次へ'},
+{kind:'title',html:'<div class="sub">灯が消えるとき、世界は凍る。</div><div class="logo">王国の灯</div><div class="sub">THE LIGHT OF THE KINGDOM</div>',button:'物語をはじめる'},
+{kind:'story',text:'千年もの間、世界樹の根元で燃え続けた「王国の灯」。\nその光は人々を守り、魔物たちと世界の均衡を保っていた。\nしかし今、灯は弱まり、世界には永遠の冬の影が迫っている。'},
+{kind:'story',text:'16年前、世界樹の根元でひとりの赤子が発見された。\n長老ヨルドに育てられたその子こそ、あなた。\nあなたには古代のルーンに応え、魔物と心を通わせる不思議な力があった。'},
+{kind:'story',text:'王国の灯を再び輝かせるため、四つの聖域を巡り、守護獣の力を集めよ。\n仲間となる魔物と共に、灯に隠された真実を探す旅が始まる。\nその先で待つのは、世界を凍らせようとする霜王の謎――。'}
+];
+let introIndex=0;
+function showIntro(){const root=document.getElementById('cinema');if(introIndex>=INTRO.length){root.remove();return}const a=INTRO[introIndex];root.innerHTML='<div class="scene">'+(a.html||'<div class="sub">PROLOGUE · '+(introIndex-1)+'/3</div><div class="story"></div>')+'<button id="introNext">'+(a.button|| (introIndex===INTRO.length-1?'冒険を始める':'次へ'))+'</button></div>';if(a.text)root.querySelector('.story').textContent=a.text;root.querySelector('#introNext').onclick=()=>{introIndex++;showIntro()}}
+showIntro();
+</script>
+</body>
+</html>
