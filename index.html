@@ -151,6 +151,15 @@ html,body{min-height:100%;}
 #world~#msg{margin-top:8px}
 #world~#menu:not(:empty){margin-top:20px}
 @media(max-height:700px){#pad{grid-template-rows:repeat(3,43px)}#pad button{min-height:43px}#exploreActions{margin-top:12px;margin-bottom:12px}}
+
+/* 初回の仲間選択: 3匹を横一列に表示 */
+#menu.starter-select{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-height:none;overflow:visible}
+#menu.starter-select button:not(.wide){min-width:0;min-height:132px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:8px 2px;touch-action:manipulation}
+#menu.starter-select .starter-portrait{display:flex;justify-content:center;align-items:center;width:100%;height:78px;pointer-events:none}
+#menu.starter-select .starter-portrait canvas{width:76px!important;height:76px!important;max-width:100%;animation:none!important}
+#menu.starter-select strong{font-size:clamp(11px,3.5vw,15px);white-space:nowrap}
+#menu.starter-select small{font-size:11px}
+#menu.starter-select .wide{grid-column:1/-1}
 </style>
 <script>
 window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
@@ -201,7 +210,7 @@ function box(m,el){el.innerHTML=`<div class="info"><b>${m.sp.n}</b> Lv${m.lv} <s
 function bars(){[[foe,'#foe'],[cur,'#me']].forEach(([m,id])=>{if(!m||!$(id+' .bar'))return;const i=$(id+' .bar i'),p=m.hp/m.max;i.style.width=p*100+'%';i.style.background=p>.5?'var(--hp)':p>.2?'var(--hpl)':'var(--hpd)';$(id+' .hpt').textContent=m.hp+'/'+m.max})}
 function info(){$('#top').textContent=`なかま ${party.length}/${PARTY_MAX}: ${party.map(m=>m.sp.n).join('、')||'なし'}　牧場 ${storage.length}体　${gold}G`}
 async function say(t,ms=800){$('#msg').textContent=t;await sleep(ms)}
-function menu(a){const m=$('#menu');m.classList.remove('dex-gallery');m.innerHTML='';a.forEach(([l,f,c])=>{const b=document.createElement('button');b.innerHTML=l;if(c)b.className=c;b.onclick=f;m.append(b)})}
+function menu(a){const m=$('#menu');m.classList.remove('dex-gallery','starter-select');m.innerHTML='';a.forEach(([l,f,c])=>{const b=document.createElement('button');b.innerHTML=l;if(c)b.className=c;b.onclick=f;m.append(b)})}
 function main(){$('#msg').textContent=`${cur.sp.n}は どうする?`;menu([["たたかう",fightMenu],["いれかえ",swapMenu],["にげる",run]])}
 function fightMenu(){menu([...moves(cur).map(v=>[`${v[0]}<small>${TN[v[1]]||v[1]} / 威力 ${v[2]}</small>`,()=>fight(v)]),["もどる",main,'wide']])}
 function swapMenu(){const o=party.filter(m=>m!==cur&&m.hp>0);if(!o.length){$('#msg').textContent='ほかに たたかえる なかまがいない!';return}
@@ -701,9 +710,13 @@ b.onpointerdown=e=>{e.preventDefault();stop();mv(...d);hold=setInterval(()=>inMa
 b.oncontextmenu=e=>e.preventDefault();b.onclick=e=>{if(e.detail===0)mv(...d)}});
 $('#mbtn').onclick=()=>{stop();openMenu()};$('#abtn').onclick=()=>{stop();act()};
 addEventListener('keydown',e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(d){e.preventDefault();mv(...d)}else if(e.key=='Enter'||e.key=='z'){e.preventDefault();act()}});
-function start(){info();$('#me').innerHTML='';$('#foe').innerHTML='';SP.slice(0,3).forEach(sp=>$('#foe').append(draw(sp,96)));
+function start(){info();$('#me').innerHTML='';$('#foe').innerHTML='';
 $('#msg').textContent='ヴァルハイム王国の 灯が きえかけている…。たびだつ なかまを えらぼう!';
-menu([...(load()?[["つづきから",cont,'wide']]:[]),...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])])}
+menu([...(load()?[["つづきから",cont,'wide']]:[]),...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])]);
+const starterMenu=$('#menu');starterMenu.classList.add('starter-select');
+const starterButtons=[...starterMenu.querySelectorAll('button')].filter(b=>!b.classList.contains('wide'));
+starterButtons.forEach((b,i)=>{const sp=SP[i];b.innerHTML='';const picture=draw(sp,76);picture.classList.add('starter-portrait');const name=document.createElement('strong');name.textContent=sp.n;const type=document.createElement('small');type.textContent=TN[sp.t];b.append(picture,name,type);b.setAttribute('aria-label',sp.n+'を選ぶ')});
+}
 start();
 // 初回起動時の演出。セーブがある場合も毎回ロゴを表示し、続きから選べる。
 const INTRO=[
