@@ -307,7 +307,7 @@ async function recruit(){
   }
  }
 }
-async function win(){if(foe.boss)return foe.sp.n===SHRINE_BOSS.n?shrineBossWin():bossWin();bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*8*(isRare(foe.sp)?3:1));gold+=foe.lv*10;cur.hp=Math.min(cur.max,cur.hp+12);bars();info();const dp=Math.random()<.3;if(dp)pot++;await say(`${foe.lv*10}G${dp?'と きずぐすり 1こ':''}を てにいれた!`,1000);save();if(Math.random()<(isRare(foe.sp)?.14:.38)){se('catch');$('#msg').textContent=`${foe.sp.n}は 仲間になりたそうに こちらを見ている!\nなかまに しますか?`;menu([["YES / なかまにする",recruit],["NO / 見送る",goMap]])}else menu([["たびを つづける",goMap]])}
+async function win(){if(foe.boss)return foe.sp.n===SHRINE_BOSS.n?shrineBossWin():foe.sp.n===LAKE_BOSS.n?lakeBossWin():bossWin();bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*8*(isRare(foe.sp)?3:1));gold+=foe.lv*10;cur.hp=Math.min(cur.max,cur.hp+12);bars();info();const dp=Math.random()<.3;if(dp)pot++;await say(`${foe.lv*10}G${dp?'と きずぐすり 1こ':''}を てにいれた!`,1000);save();if(Math.random()<(isRare(foe.sp)?.14:.38)){se('catch');$('#msg').textContent=`${foe.sp.n}は 仲間になりたそうに こちらを見ている!\nなかまに しますか?`;menu([["YES / なかまにする",recruit],["NO / 見送る",goMap]])}else menu([["たびを つづける",goMap]])}
 async function lose(){se('lose');await say(`${cur.sp.n}は たおれた!`);const n=party.find(m=>m.hp>0);
 if(n){cur=n;box(cur,$('#me'));await say(`ゆけっ ${n.sp.n}!`);return main()}
 await say('めのまえが まっくらになった…',1200);party.forEach(m=>m.hp=m.max);menu([["たびを つづける",goMap]])}
@@ -373,9 +373,24 @@ let shrineActivated=[];
 FOREST[19]=FOREST[19].slice(0,11)+'p'+FOREST[19].slice(12);
 FOREST[20]=FOREST[20].slice(0,11)+'D'+FOREST[20].slice(12);
 FOREST[1]=FOREST[1].slice(0,10)+'E'+FOREST[1].slice(11);
-const MAPS={roots:ROOTS,runes:RUNES,altar:ALTAR,world:WORLD,cave:CAVE,forest:FOREST,hero:['wwwwwwwww','wkkffffbw','wffffffbw','wfffffffw','wffttfffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww'],jord:['wwwwwwwww','wkkkkfffw','wfffffffw','wfttffbbw','wfffffffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww']};
+// 第二章・月鏡湖：湖岸、桟橋、湖心の祭壇。水域は通行不可。
+const LAKE=Array.from({length:21},(_,y)=>Array.from({length:23},(_,x)=>{
+ if(x===0||x===22||y===0||y===20)return 'T';
+ const dx=x-11,dy=y-10;
+ if(dx*dx/86+dy*dy/49<1)return '~';
+ return (x>3&&x<19&&y>2&&y<19&&((x+y)%7===0))?'g':'.';
+}).join(''));
+const lakeStamp=(x,y,ch)=>LAKE[y]=LAKE[y].slice(0,x)+ch+LAKE[y].slice(x+1);
+// 南北に架かる長い桟橋。中央の小島で守護竜と対話できる。
+for(let y=2;y<=19;y++)lakeStamp(11,y,'p');
+for(let x=9;x<=13;x++)for(let y=8;y<=12;y++)lakeStamp(x,y,'S');
+for(let y=8;y<=12;y++)lakeStamp(11,y,'p');
+lakeStamp(11,19,'p');lakeStamp(11,20,'D');lakeStamp(11,2,'H');
+let lakeClear=false;
+const LAKE_BOSS={n:'蒼淵竜ネレイディス',t:'water',t2:'light',hp:120,a:24,d:19,s:17,mv:[['蒼流の牙','water',78],['月鏡の波','water',95],['湖底の祈り','light',68]]};
+const MAPS={lake:LAKE,roots:ROOTS,runes:RUNES,altar:ALTAR,world:WORLD,cave:CAVE,forest:FOREST,hero:['wwwwwwwww','wkkffffbw','wffffffbw','wfffffffw','wffttfffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww'],jord:['wwwwwwwww','wkkkkfffw','wfffffffw','wfttffbbw','wfffffffw','wfffffffw','wfffffffw','wfffffffw','wwwwxwwww']};
 let MAP=WORLD,curMap='world',face=[0,1];
-const DOORS={'world:2,4':['hero',4,7],'hero:4,8':['world',2,5],'world:10,4':['jord',4,7],'jord:4,8':['world',10,5],'world:34,6':['cave',2,16],'cave:2,17':['world',34,7],'world:10,20':['forest',11,19],'forest:11,20':['world',10,21],'forest:10,1':['roots',9,17],'roots:9,17':['forest',10,2],'roots:9,1':['runes',9,17],'runes:9,17':['roots',9,2],'runes:9,1':['altar',9,16],'altar:9,17':['runes',9,2]},EXIT={hero:[2,5],jord:[10,5],cave:[34,7],forest:[10,21],roots:[10,2],runes:[10,2],altar:[10,2]};
+const DOORS={'world:2,4':['hero',4,7],'hero:4,8':['world',2,5],'world:10,4':['jord',4,7],'jord:4,8':['world',10,5],'world:25,8':['lake',11,19],'lake:11,20':['world',25,9],'world:34,6':['cave',2,16],'cave:2,17':['world',34,7],'world:10,20':['forest',11,19],'forest:11,20':['world',10,21],'forest:10,1':['roots',9,17],'roots:9,17':['forest',10,2],'roots:9,1':['runes',9,17],'runes:9,17':['roots',9,2],'runes:9,1':['altar',9,16],'altar:9,17':['runes',9,2]},EXIT={hero:[2,5],jord:[10,5],cave:[34,7],forest:[10,21],roots:[10,2],runes:[10,2],altar:[10,2],lake:[25,9]};
 const NOTES={},nt=(m,l,v)=>l.forEach(([x,y])=>{NOTES[m+':'+x+','+y]=v});
 nt('hero',[[3,4],[4,4]],['じぶんの 部屋だ。つくえの 上に 古い 日記が ひらいたままだ。','『16年前の ある夜、世界樹の根もとで ひかる赤ん坊を ひろった。この子は…』 そこで ページが やぶれている。']);
 nt('hero',[[7,1],[7,2]],'bed');nt('jord',[[6,3],[7,3]],'bed');
@@ -386,6 +401,7 @@ nt('cave',[[3,16]],['紅蓮岳・灼熱の洞窟','黒曜石の通路が奥へ�
 nt('world',[[19,7]],['風渡りの平原','ヴァルハイムの東に広がる緑の大地。さらに東には火山地帯が待つ。']);
 nt('world',[[4,8]],['ヴァルハイムの 村','世界樹の 根もとにひらけた 小さな 村。東は 火山、南は 封印の門。']);
 nt('world',[[11,20],[11,21]],['古い石碑に『世界樹の森へ。南から北へ、灯を掲げて進め』と刻まれている。','千年前の灯守がこの道を通ったという。']);
+nt('lake',[[11,18]],['第二章・月鏡湖。湖心の祭壇へ向かおう。水面には千年前の記憶が映る。']);
 nt('forest',[[10,3],[11,3]],['古代樹の森。千年前、灯守と守護獣がここで誓いを交わしたという。','木の幹に刻まれたルーンが、あなたの手に淡く応える…']);
 nt('forest',[[9,2],[10,2]],['世界樹の根が門を形づくっている。北の神殿へ進もう。']);
 nt('roots',[[9,16]],['第一層・絡み合う根の迷宮。巨大な根が道を覆う。']);
@@ -546,7 +562,7 @@ const isRare=sp=>RARE.includes(sp),allSpecies=()=>[...SP,...Object.values(EVO),.
 const ELD=['..kkkkk','.kwwwww','kwwwwww','kwwffff','kwfkfff','kwwffff','kwwwwww','.kwwwww','.kwwwww','kpwwwww','kppwwww','kpppwww','kpyyyyy','kpppppp','.kkkkkk'],ELDP={k:'#1a1a24',w:'#eeeeee',f:'#f0c8a0',p:'#7a4aa0',y:'#e8b030'},
 MER=['..kkkkk','.khhhhh','khhhhhh','kHHHHHH','.kfffff','.kfkfff','.kffmmm','..kkfff','..kkrrr','kBkoooo','kBBoooo','kBBoooo','kBkyyyy','.kppp..','.kkkk..'],MERP={k:'#1a1a24',h:'#8a5a2a',H:'#5a3a1a',f:'#f0c8a0',m:'#4a2a14',r:'#d8432a',o:'#e08a30',B:'#6a4a2a',y:'#e8b030',p:'#3a3a5a'};
 let met=0;const NPCS=[{x:4,y:3,m:'jord',g:ELD,p:ELDP,st:'#6fd0ff',t:()=>{const L=met?["長老ヨルド:「灯は まだ きえておらぬ。いそがず きたえるのじゃ、旅人よ。」","「なかまが きずついたら、そこの 広間の 灯で やすむがよい。」"]:["長老ヨルド:「よく きたな。わしは この国の 長老 ヨルドじゃ。」","「世界樹の根で もえる『王国の灯』が きえかけておる。灯が きえれば、フィンブルの冬が この国を とざすじゃろう。」","「灯を よみがえらせるには、4つの 聖域を まもる 守護獣の ちからが いる。」","「まずは なかまを きたえ、モンスターを あつめるのじゃ。レベルを あげて、くさむらの さきを めざせ!」"];met=1;return L}}];
-NPCS.push({m:'forest',x:17,y:3,c:'#3a8756',h:'#d7f6c0',t:()=>['森の番人:「ここは古代樹の森。世界樹の灯に呼ばれた者だけが奥へ進める。」','「紅蓮岳の封印を解いたのなら、次はこの森に眠る守護獣の伝承を追うといい。」']});
+NPCS.push({m:'forest',x:17,y:3,c:'#3a8756',h:'#d7f6c0',t:()=>['森の番人:「ここは古代樹の森。世界樹の灯に呼ばれた者だけが奥へ進める。」','「まずは世界樹の神殿で翠樹王の試練を受けるのだ。紅蓮岳への道はそのあと開かれる。」']});
 let px=7,py=7,inMap=false;const T=30,V=9,CL={'.':'#7bbf5a',g:'#3f8f3f',T:'#1f5a2e',p:'#d8c08a','~':'#3d7fd0',H:'#8a6a4a',M:'#7a7a86',S:'#ecd9a0',A:'#6a5a58',L:'#e8501a',G:'#5a3a30',C:'#3a2424',B:'#39303b',Q:'#8b552c',D:'#8a5a3a',R:'#a8452e',W:'#e0d0a8',O:'#6a4020',N:'#7bbf5a',f:'#c8a070',w:'#6a4a30',k:'#8a5a30',b:'#c07080',t:'#9a6a3a',x:'#e8d8b0',Z:'#21191f',E:'#4a261f'};
 const areaLv=(x,y)=>['roots','runes','altar'].includes(curMap)?21:curMap=='forest'?16:curMap=='cave'?12:x>=24&&y>=16?(y<24?12:14):y>=16?(x<8?10:11):x>=24?(y<8?10:9):(y<=2?3:x>=10&&y<=5?5:x<=5&&y<=8?3:x>=16&&x<24?6:x<=5&&y>=9?4:x>=10&&y<=10?6:8);
 function show(w){inMap=w;$('#field').style.display=w?'none':'flex';$('#world').style.display=w?'flex':'none'}
@@ -629,6 +645,7 @@ function drawFinalEnvironment(c,vx,vy){
 function drawMap(){const x=$('#map').getContext('2d'),vx=Math.min(Math.max(px-4,0),MAP[0].length-V),vy=Math.min(Math.max(py-4,0),MAP.length-V);
 for(let j=0;j<V;j++)for(let i=0;i<V;i++){let ch=MAP[vy+j][vx+i];const X=i*T,Y=j*T;x.fillStyle=ch=='D'&&keys?CL.p:CL[ch];x.fillRect(X,Y,T,T);paintTile(x,ch,X,Y,vx+i,vy+j);deco(x,ch,X,Y,(vx+i)*7+(vy+j)*13+(vx+i)*(vy+j));
 if(['roots','runes','altar'].includes(curMap)){x.fillStyle=ch==='T'?'rgba(37,76,52,.24)':ch==='S'?'rgba(195,172,112,.24)':'rgba(66,87,70,.15)';x.fillRect(X,Y,T,T);x.strokeStyle=ch==='T'?'#547c52':'#8b9e70';x.strokeRect(X+2,Y+2,26,26);if(ch==='T'){x.fillStyle='#80603a';x.fillRect(X+12,Y+13,6,17);x.fillStyle='#36794d';x.fillRect(X+4,Y+2,22,17)}if(curMap==='altar'&&ch==='S'){x.fillStyle='rgba(238,219,130,.35)';x.fillRect(X+7,Y+2,16,26)}}
+if(curMap==='lake'&&ch==='~'){x.fillStyle='rgba(76,188,215,.18)';x.fillRect(X,Y,T,T)}
 if(curMap==='forest' && ch==='T'){x.fillStyle='#244b30';x.fillRect(X+11,Y+16,8,14);x.fillStyle='#377a42';x.beginPath();x.arc(X+15,Y+12,12,0,Math.PI*2);x.fill();x.fillStyle='#65a85b';x.fillRect(X+7,Y+6,7,4);x.fillRect(X+17,Y+11,6,3)}
 if(curMap==='forest' && ch==='g'){x.fillStyle='#286b36';for(let k=0;k<4;k++)x.fillRect(X+3+k*7,Y+8+(k%2)*4,3,13)}
 if(curMap==='cave' && vx+i>=14 && vx+i<=19 && vy+j<=6 && ch==='C'){
@@ -880,7 +897,7 @@ TR.cave={bpm:102,l:[57,0,60,0,61,0,60,0,57,0,64,0,63,0,60,0,55,0,58,0,59,0,58,0,
 TR.roots={bpm:80,l:[64,0,67,0,71,0,67,0,62,0,66,0,69,0,66,0,60,0,64,0,67,0,64,0,59,0,62,0,64,0,0,0],b:[40,0,0,0,47,0,0,0,38,0,0,0,45,0,0,0,36,0,0,0,43,0,0,0,35,0,0,0,42,0,0,0]};
 TR.runes={bpm:90,l:[72,0,79,0,76,0,83,0,74,0,81,0,77,0,84,0,76,0,83,0,79,0,86,0,72,0,79,0,76,0,0,0],b:[48,0,0,0,55,0,0,0,50,0,0,0,57,0,0,0,52,0,0,0,59,0,0,0,48,0,0,0,55,0,0,0]};
 TR.altar={bpm:100,l:[67,0,72,0,76,0,79,0,81,0,79,0,76,0,72,0,69,0,74,0,77,0,81,0,79,0,76,0,72,0,67,0],b:[43,0,0,0,50,0,0,0,45,0,0,0,52,0,0,0,41,0,0,0,48,0,0,0,43,0,0,0,50,0,0,0]};
-function mapTrack(){return ({world:'field',village:'village',forest:'forest',cave:'cave',roots:'roots',runes:'runes',altar:'altar'})[curMap]||'village'}
+function mapTrack(){return ({world:'field',village:'village',forest:'forest',cave:'cave',roots:'roots',runes:'runes',altar:'altar',lake:'forest'})[curMap]||'village'}
 function bgm(name){if(curBgm==name&&bgmT)return;curBgm=name;clearInterval(bgmT);bgmT=0;if(!name||mute)return;const a=AU();if(!a||a.state!=='running')return;const T=TR[name]||TR.field,st=60/T.bpm/2;let i=0,t=a.currentTime+.1;bgmT=setInterval(()=>{while(t<a.currentTime+.3){const k=i%32;if(T.l[k])tone(NF(T.l[k]),t,st*.9,'square',.03);if(T.b[k])tone(NF(T.b[k]),t,st*1.8,'triangle',.08);t+=st;i++}},100)}
 document.addEventListener('pointerdown',()=>{if(!audioReady&&!mute)unlockAudio()}, {passive:true});
 document.addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('#pad button[data-d]'))se('ui')},true);
@@ -889,7 +906,7 @@ $('#snd').onclick=async()=>{if(mute){mute=false;$('#snd').textContent='♪';awai
 let gold=0,pot=3,keys=0,bossFoe=null,inBt=0;const KEY='valheim-save1';
 function act(){if(!inMap){const b=$('#menu button');if(b)b.click();return}
 const tx=px+face[0],ty=py+face[1],n=NPCS.find(n=>(n.m||'world')==curMap&&n.x==tx&&n.y==ty);
-if(n){talk(n.t(),0,n.s?shop:n.b===2?shrineBossGo:n.b?bossGo:0);return}
+if(n){talk(n.t(),0,n.s?shop:n.b===2?shrineBossGo:n.b===3?lakeBossGo:n.b?bossGo:0);return}
 const v=NOTES[curMap+':'+tx+','+ty];
 if(v=='bed'){se('heal');party.forEach(m=>m.hp=m.max);info();talk(['ぐっすり ねむった! なかまが かいふくした!']);return}
 if(v)talk(v)}
@@ -900,8 +917,9 @@ const ATLAS_PLACES=[
  {n:'ヴァルハイム',x:91,y:174,t:'castle',d:'物語の出発点。長老ヨルドと灯守の記憶が眠る村。',open:true},
  {n:'港町リヴェラ',x:70,y:260,t:'port',d:'西海岸の港町。水の聖域へ向かう航路（今後実装）。',open:false},
  {n:'風渡りの平原',x:175,y:206,t:'plain',d:'冒険の始まりとなる草原。草むらで仲間と出会える。',open:true},
- {n:'紅蓮岳',x:242,y:168,t:'volcano',d:'灼熱の洞窟。魔竜ゴルヴァザークが封印を守る。',open:true},
- {n:'古代樹の森',x:310,y:239,t:'forest',d:'南の門から北向きに入り、世界樹を目指す。',open:true},
+ {n:'紅蓮岳',x:242,y:168,t:'volcano',d:'第三章：湖の加護を得てから挑む魔竜の洞窟。',open:true},
+ {n:'月鏡湖',x:239,y:228,t:'lake',d:'第二章：湖心の祭壇で蒼淵竜ネレイディスと出会う。',open:true},
+ {n:'古代樹の森',x:310,y:239,t:'forest',d:'第一章：南の門から北向きに入り、世界樹を目指す。',open:true},
  {n:'世界樹の神殿',x:342,y:169,t:'tree',d:'三層の神殿と翠樹王ヴェルディオンの試練。',open:true},
  {n:'霜王の領域',x:247,y:59,t:'icecastle',d:'霜王スリュムガルドの居城。物語終盤の地（今後実装）。',open:false},
  {n:'氷の聖域',x:398,y:77,t:'ice',d:'凍てつく氷河と封じられた聖域（今後実装）。',open:false},
@@ -912,7 +930,7 @@ const ATLAS_PLACES=[
 let atlasSelected=-1;
 function openAtlas(){
  document.getElementById('atlasOverlay').style.display='flex';
- const current=({world:'ヴァルハイム',hero:'ヴァルハイム',jord:'ヴァルハイム',cave:'紅蓮岳',forest:'古代樹の森',roots:'世界樹の神殿',runes:'世界樹の神殿',altar:'世界樹の神殿'})[curMap]||'ヴァルハイム';
+ const current=({world:'ヴァルハイム',hero:'ヴァルハイム',jord:'ヴァルハイム',cave:'紅蓮岳',forest:'古代樹の森',roots:'世界樹の神殿',runes:'世界樹の神殿',altar:'世界樹の神殿',lake:'月鏡湖'})[curMap]||'ヴァルハイム';
  atlasSelected=ATLAS_PLACES.findIndex(p=>p.n===current);drawAtlas();
 }
 function drawAtlas(){
@@ -986,7 +1004,7 @@ function drawAtlas(){
   if(selected){c.strokeStyle='#9df7ff';c.lineWidth=2;c.strokeRect(p.x-21,p.y-35,42,55)}
  });
  c.textAlign='left';c.font='bold 12px sans-serif';c.fillStyle='#fce3a9';c.fillText('王国の灯  WORLD MAP',74,15);
- const current=ATLAS_PLACES[atlasSelected];const status=shrineClear?'世界樹の加護を獲得':keys?'炎の封印の鍵を獲得':'紅蓮岳の魔竜を追う';
+ const current=ATLAS_PLACES[atlasSelected];const status=shrineClear?'世界樹の加護を獲得':keys?'炎の封印の鍵を獲得':'第一章：古代樹の森へ';
  document.getElementById('atlasInfo').textContent=(current?'選択：'+current.n+'\n'+current.d+'\n':'')+'旅の進行：'+status+'\n地名をタップすると地域情報を表示。🔒は今後開放予定。';
 }
 document.getElementById('atlasCanvas').addEventListener('click',function(e){
@@ -1000,7 +1018,11 @@ document.getElementById('atlasClose').addEventListener('click',closeAtlas);
 document.getElementById('atlasOverlay').addEventListener('click',e=>{if(e.target.id==='atlasOverlay')closeAtlas()});
 
 function openMenu(){if(!inMap)return;inMap=false;mainMenu()}
-function mainMenu(){$('#msg').textContent=`メニュー\nしょじきん ${gold}G　カギ ${keys}/4`;menu([["世界地図",openAtlas],["ステータス",stMenu],["図鑑",dexMenu],["あいしょう",chartMenu],["牧場",farmMenu],["アイテム",itMenu],["セーブ",saveGame],["とじる",goMap]])}
+function storyJournal(){
+ const chapters=[['第一章・古代樹の森',shrineClear?'完了：ヴェルディオンを闇から救出':'進行中：世界樹の神殿を探索'],['第二章・月鏡湖',lakeClear?'完了：ネレイディスの封印を修復':shrineClear?'進行中：平原東の湖へ':'未解放'],['第三章・紅蓮岳',keys>=2?'完了：魔竜を撃退':lakeClear?'進行中：魔竜の洞窟へ':'未解放'],['第四章・砂塵の王国','今後の冒険'],['第五章・常闇の領域','今後の冒険'],['第六章・光の聖域','今後の冒険'],['最終章・霜王の領域','今後の冒険']];
+ $('#msg').textContent='冒険の記録\n'+chapters.map(([a,b])=>a+'：'+b).join('\n')+'\n\n守護獣を救った絆は最終決戦につながる。';menu([['メニューへ',mainMenu,'wide']]);
+}
+function mainMenu(){$('#msg').textContent=`メニュー\nしょじきん ${gold}G　カギ ${keys}/4`;menu([["世界地図",openAtlas],["冒険の記録",storyJournal],["ステータス",stMenu],["図鑑",dexMenu],["あいしょう",chartMenu],["牧場",farmMenu],["アイテム",itMenu],["セーブ",saveGame],["とじる",goMap]])}
 function dexMenu(){const L=allSpecies(),k=L.filter(s=>dex[s.n]);$('#msg').textContent=`モンスター図鑑　${k.length} / ${L.length}\nモンスターを選ぶと姿・進化・技を確認できる。`;menu([['全モンスター図鑑（グラフィック）',dexGallery,'wide'],...L.map((s,i)=>[`${String(i+1).padStart(2,'0')} ${s.n}<small>${TN[s.t]||s.t}${s.t2?'/'+(TN[s.t2]||s.t2):''}　${dex[s.n]?'発見済':'未発見'}</small>`,()=>dexDetail(s)]),['もどる',mainMenu,'wide']])}
 function dexLine(sp){const predecessors=Object.entries(EVO).filter(([n,e])=>e.n===sp.n).map(([n])=>n);let root=sp.n;while(true){const prev=Object.entries(EVO).find(([n,e])=>e.n===root);if(!prev)break;root=prev[0]}const chain=[root];while(EVO[chain[chain.length-1]])chain.push(EVO[chain[chain.length-1]].n);return chain}
 function dexSpecies(n){return allSpecies().find(s=>s.n===n)||Object.values(EVO).find(s=>s.n===n)}
@@ -1017,10 +1039,10 @@ function stDetail(m){$('#msg').textContent=`${m.sp.n} Lv${m.lv} (${TN[m.sp.t]}${
 function itMenu(){$('#msg').textContent=`もちもの\nきずぐすり ×${pot}${keys?'\nほのおの封印のカギ':''}`;menu([[`きずぐすり<small>HP30かいふく</small>`,potMenu],["もどる",mainMenu]])}
 function potMenu(){if(!pot){$('#msg').textContent='きずぐすりが ない!';return}$('#msg').textContent='だれに つかう?';
 menu([...party.map(m=>[`${m.sp.n}<small>HP ${m.hp}/${m.max}</small>`,()=>{if(m.hp>=m.max){$('#msg').textContent='HPは まんたんだ!';return}pot--;m.hp=Math.min(m.max,m.hp+30);$('#msg').textContent=`${m.sp.n}の HPが かいふくした!`;setTimeout(itMenu,900)}]),["もどる",itMenu,'wide']])}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({p:party.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),b:storage.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),d:dex,c:party.indexOf(cur),balls,pot,gold,px,py,curMap,met,keys,shrineClear,shrineActivated}));return 1}catch(e){return 0}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({p:party.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),b:storage.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),d:dex,c:party.indexOf(cur),balls,pot,gold,px,py,curMap,met,keys,shrineClear,shrineActivated,lakeClear}));return 1}catch(e){return 0}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 function saveGame(){$('#msg').textContent=save()?'セーブした!':'セーブに しっぱいした…(このブラウザでは つかえないかも)';menu([["もどる",mainMenu,'wide']])}
-function cont(){const s=load();if(!s)return;const f=n=>(n=RN[n]||n,0)||SP.find(x=>x.n==n)||Object.values(EVO).find(x=>x.n==n)||RARE.find(x=>x.n==n)||VOLC.find(x=>x.n==n);party=s.p.map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));storage=(s.b||[]).map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));dex=s.d||{};party.forEach(m=>markDex(m.sp.n));party.forEach(m=>{if(!m.learned)m.learned=teach(m)});storage.forEach(m=>{if(!m.learned)m.learned=teach(m)});cur=party[Math.max(0,s.c)];({balls,pot,gold,px,py,met}=s);keys=s.keys||0;shrineClear=!!s.shrineClear;shrineActivated=s.shrineActivated||[];if(shrineClear){const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1)}if(keys){const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1)}curMap=MAPS[s.curMap]?s.curMap:'world';MAP=MAPS[curMap];if(!Number.isFinite(px)||!Number.isFinite(py)||!MAP[py]||!MAP[py][px]){curMap='world';MAP=WORLD;px=7;py=7}goMap()}
+function cont(){const s=load();if(!s)return;const f=n=>(n=RN[n]||n,0)||SP.find(x=>x.n==n)||Object.values(EVO).find(x=>x.n==n)||RARE.find(x=>x.n==n)||VOLC.find(x=>x.n==n);party=s.p.map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));storage=(s.b||[]).map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));dex=s.d||{};party.forEach(m=>markDex(m.sp.n));party.forEach(m=>{if(!m.learned)m.learned=teach(m)});storage.forEach(m=>{if(!m.learned)m.learned=teach(m)});cur=party[Math.max(0,s.c)];({balls,pot,gold,px,py,met}=s);keys=s.keys||0;shrineClear=!!s.shrineClear;lakeClear=!!s.lakeClear;shrineActivated=s.shrineActivated||[];if(lakeClear){const lakeNpc=NPCS.find(n=>n.m==='lake'&&n.b===3);if(lakeNpc)lakeNpc.b=0}if(shrineClear){const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1)}if(keys){const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1)}curMap=MAPS[s.curMap]?s.curMap:'world';MAP=MAPS[curMap];if(!Number.isFinite(px)||!Number.isFinite(py)||!MAP[py]||!MAP[py][px]){curMap='world';MAP=WORLD;px=7;py=7}goMap()}
 NPCS.push({x:27,y:9,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#2f7be0'},t:()=>['旅の剣士ロルフ:「東の湖の むこうには 光の神殿が あるらしい。」','「南の平原を回り込んで、北向きに森の門をくぐれ。世界樹の守護獣が待っているそうだ。」','「道ばたの 灯の ほこらで やすめるから、むりは するなよ。」']});
 NPCS.push({x:9,y:7,g:MER,p:{...MERP,h:'#c0402a',H:'#8a2a1a',m:'#f0c8a0',o:'#f08ab0',B:'#f08ab0',r:'#ffd070'},t:()=>['少女ミナ:「あなたが ひろわれた 夜は、灯が とても あかるく もえたって おばあちゃんが いってたよ。」','「ヨルドさんは やさしいけど、ときどき 灯を みつめて さみしそうなの。」']});
 NPCS.push({x:2,y:8,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#5a8a3a'},t:()=>['農夫ハルド:「むかしは 灯守さまが いたそうだが、いつからか だれも おぼえとらん。」','「どうして わすれてしまったのかのう…」']});
@@ -1039,14 +1061,17 @@ for(let i=0;i<16;i++){const z=6+Math.random()*9,s=mkEl({left:cx+'px',top:cy+'px'
 s.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${t=='grass'?360:0}deg) scale(.2)`,opacity:0}],{duration:450+Math.random()*300,easing:'ease-out'}).onfinish=()=>s.remove()}
 if(t=='electric'){const b=mkEl({left:cx-22+'px',top:cy-70+'px',width:'44px',height:'140px',background:'#fff7a0',clipPath:'polygon(50% 0,18% 52%,44% 52%,28% 100%,82% 40%,56% 40%,72% 0)',filter:'drop-shadow(0 0 6px #ffe14a)'});b.animate([{opacity:1},{opacity:.1},{opacity:1},{opacity:0}],{duration:450}).onfinish=()=>b.remove()}
 if(t=='normal'){const b=mkEl({left:cx-50+'px',top:cy-3+'px',width:'100px',height:'6px',background:'#fff',transform:'rotate(-35deg)',boxShadow:'0 0 8px #fff'});b.animate([{opacity:1,clipPath:'inset(0 100% 0 0)'},{opacity:1,clipPath:'inset(0 0 0 0)'},{opacity:0,clipPath:'inset(0 0 0 0)'}],{duration:350}).onfinish=()=>b.remove()}}
+NPCS.push({m:'lake',x:11,y:7,b:3,g:ELD,p:{...ELDP,w:'#3e9bb6',p:'#1668a4'},t:()=>['湖心に青い光が渦巻いている……']});
+function lakeBossGo(){if(lakeClear)return talk(['ネレイディス:「水は記憶を運ぶ。最後の冬が訪れたとき、必ず力を貸そう。」']);bossFoe=mk(LAKE_BOSS,27);bossFoe.boss=1;enc('湖の底から蒼淵竜ネレイディスが現れた！ 竜は封印を守るため苦しんでいる……')}
+async function lakeBossWin(){bgm('');se('win');await say('ネレイディスを鎮めた！ 湖の封印が安定してゆく……');await gain(cur,27*18);lakeClear=true;const lakeNpc=NPCS.find(n=>n.m==='lake'&&n.b===3);if(lakeNpc)lakeNpc.b=0;gold+=650;party.forEach(m=>m.hp=m.max);info();save();talk(['ネレイディス:「……助かった。私が守っていたのは湖ではない。千年前の、ひとりの少女の記憶だ。」','湖面に少女シグリの姿が浮かぶ。初代灯守スリュムガルドは彼女を失い、永遠の冬を願った。','ネレイディス:「だが光だけでも、影だけでも世界は守れない。お前なら別の道を見つけられる。」','蒼き水の加護を得た！ ネレイディスは最後の戦いで必ず駆けつけると約束した。','第三章・紅蓮岳へ。炎を独占しようとする魔竜が目覚めている。'])}
 function shrineBossGo(){if(shrineClear)return goMap();bossFoe=mk(SHRINE_BOSS,23);bossFoe.boss=1;enc('翠樹王ヴェルディオンが目覚めた！')}
-async function shrineBossWin(){bgm('');se('win');await say('翠樹王ヴェルディオンを乗り越えた！');await gain(cur,23*18);shrineClear=true;keys=Math.max(keys,2);gold+=600;const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1);party.forEach(m=>m.hp=m.max);info();save();talk(['翠樹王:「見事だ。お前の灯は命を守るために燃えている。」','世界樹の加護を得た！ 仲間のHPが全回復した。600Gを手に入れた。','古代の記憶が流れ込む。千年前、初代灯守スリュムガルドは妹シグリを失った。','「灯は命を燃やしていた……」真実の断片を胸に、次の聖域へ進もう。'])}
-function bossGo(){if(bossFoe)return;bossFoe=mk(BOSS,11);bossFoe.boss=1;enc('魔竜が おそいかかってきた!')}
-async function bossWin(){bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*16);keys=1;gold+=300;{const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1);}curMap='world';MAP=WORLD;px=34;py=7;face=[0,1];info();save();await say('ほのおの封印のカギを手に入れた！ 南の平原を進み、森の門へ南側から回り込もう。↑方向に進めば第二章が始まる。300Gも手に入れた！',1800);menu([["洞窟の入り口へ",goMap]])}
+async function shrineBossWin(){bgm('');se('win');await say('ヴェルディオンを覆う闇が暴走した！ 主人公のルーンが共鳴する……');await say('翠の光が闇を浄化した！ ヴェルディオンは正気を取り戻した！');await gain(cur,23*18);shrineClear=true;keys=Math.max(keys,1);gold+=600;const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1);party.forEach(m=>m.hp=m.max);info();save();talk(['ヴェルディオン:「ありがとう……闇に囚われた私を救ってくれたのだな。」','世界樹の加護を得た！ 仲間のHPが全回復した。600Gを手に入れた。','古代の記憶が流れ込む。千年前、初代灯守スリュムガルドは妹シグリを失った。','「灯は命を燃やしていた……」真実の断片を胸に、次は月鏡湖へ。湖へ続く翠の結界が解けた！'])}
+function bossGo(){if(bossFoe)return;bossFoe=mk(BOSS,24);bossFoe.boss=1;enc('魔竜が おそいかかってきた!')}
+async function bossWin(){bgm('');se('win');$('#foe .spr').style.opacity=.1;await say(`${foe.sp.n}を たおした!`);await gain(cur,foe.lv*16);keys=Math.max(keys,2);gold+=300;{const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1);}curMap='world';MAP=WORLD;px=34;py=7;face=[0,1];info();save();await say('魔竜を退け、炎の封印の鍵を手に入れた！ 世界樹の加護と炎の鍵が共鳴する。次の聖域への道が開く……。300Gも手に入れた！',1800);menu([["洞窟の入り口へ",goMap]])}
 function talk(L,i=0,fn){if(i>=L.length)return fn?fn():goMap();inMap=false;$('#msg').textContent=L[i];menu([["つぎへ",()=>talk(L,i+1,fn)]])}
-function goMap(){inBt=0;bgm(mapTrack());show(true);menu([]);info();drawMap();$('#msg').textContent=met?curMap=='cave'?'紅蓮岳・灼熱の迷宮。分かれ道を抜け、燭台が照らす最奥の祭壇へ進もう。洞窟の敵との遭遇率は低めだ。':curMap=='forest'?'第二章・古代樹の森。北の世界樹の神殿へ向かおう。':curMap=='roots'?'世界樹の神殿・根の迷宮。北の階段を探そう。':curMap=='runes'?'精霊の回廊。3つのルーンを順番に踏もう。':curMap=='altar'?'生命の祭壇。翠樹王が待っている。':'くさむらで モンスターに であえる。まれに 色ちがいの ★レアモンスターも あらわれるぞ! 広間の灯で なかまが かいふくするぞ。':'村の 右上の 家に すむ 長老ヨルドに はなしかけてみよう。「決定」ボタンで 話せるよ。'}
+function goMap(){inBt=0;bgm(mapTrack());show(true);menu([]);info();drawMap();$('#msg').textContent=met?curMap=='lake'?'第二章・月鏡湖。桟橋を渡り、蒼淵竜の封印を調べよう。':curMap=='cave'?'第三章・紅蓮岳。世界樹の加護を胸に、灼熱の迷宮の最奥で魔竜に挑もう。':curMap=='forest'?'第一章・古代樹の森。北の世界樹の神殿で翠樹王の試練を受けよう。':curMap=='roots'?'世界樹の神殿・根の迷宮。北の階段を探そう。':curMap=='runes'?'精霊の回廊。3つのルーンを順番に踏もう。':curMap=='altar'?'生命の祭壇。翠樹王が待っている。':'くさむらで モンスターに であえる。まれに 色ちがいの ★レアモンスターも あらわれるぞ! 広間の灯で なかまが かいふくするぞ。':'村の 右上の 家に すむ 長老ヨルドに はなしかけてみよう。「決定」ボタンで 話せるよ。'}
 async function enc(m){inMap=false;bgm('');se('enc');await say(m||'くさむらから なにかが とびだした!');battle()}
-function mv(dx,dy){if(!inMap)return;face=[dx,dy];const nx=px+dx,ny=py+dy,ch=MAP[ny]?.[nx];const npc=NPCS.find(n=>(n.m||'world')==curMap&&n.x==nx&&n.y==ny);if(npc){if(npc.b){stop();talk(npc.t(),0,npc.b===2?shrineBossGo:bossGo)}return}if(!ch||ch=='T'||ch=='~'||'MLRWwkbtNZBQ'.includes(ch))return;if(ch=='D'&&!keys){$('#msg').textContent='封印の門だ。ほのおの封印のカギが ひつようだ…';return}if(curMap==='world'&&nx===10&&ny===20&&dy!==-1){$('#msg').textContent='世界樹の森の門だ。南へ回り、↑方向に進んで入ろう。';drawMap();return}px=nx;py=ny;se('step');const sw=SHRINE_SWITCHES.findIndex(q=>q.m===curMap&&q.x===px&&q.y===py);if(sw>=0&&!shrineActivated.includes(sw)){if(sw===shrineActivated.length){shrineActivated.push(sw);se('light');$('#msg').textContent=`ルーン ${sw+1}/3 が輝いた！`;if(shrineActivated.length===3)$('#msg').textContent='三つのルーンが共鳴した！ 生命の祭壇への道が開いた。'}else{shrineActivated=[];$('#msg').textContent='ルーンの順番が違う！ 光が消えてしまった…'}}const wp=DOORS[curMap+':'+px+','+py];if(wp){if(curMap==='runes'&&wp[0]==='altar'&&shrineActivated.length<3){$('#msg').textContent='祭壇の門は閉ざされている。3つのルーンを順番に起動しよう。';return}curMap=wp[0];MAP=MAPS[curMap];px=wp[1];py=wp[2];bgm(mapTrack());drawMap();$('#msg').textContent=curMap=='cave'?'紅蓮岳・灼熱の洞窟に 足をふみいれた…':curMap=='forest'?'第二章・古代樹の森。南の門を越えると、世界樹のルーンが呼びかける。北の神殿で翠樹王の試練に挑もう…':['roots','runes','altar'].includes(curMap)?'世界樹の神殿。古いルーンが静かに光る…':curMap=='world'?'フィールドに もどった。':'家に 入った。';return}drawMap();
+function mv(dx,dy){if(!inMap)return;face=[dx,dy];const nx=px+dx,ny=py+dy,ch=MAP[ny]?.[nx];const npc=NPCS.find(n=>(n.m||'world')==curMap&&n.x==nx&&n.y==ny);if(npc){if(npc.b){stop();talk(npc.t(),0,npc.b===2?shrineBossGo:bossGo)}return}if(!ch||ch=='T'||ch=='~'||'MLRWwkbtNZBQ'.includes(ch))return;if(ch=='D'&&!(curMap==='world'&&nx===10&&ny===20)&&!keys){$('#msg').textContent='封印の門だ。封印のカギが ひつようだ…';return}if(curMap==='world'&&nx===10&&ny===20&&dy!==-1){$('#msg').textContent='世界樹の森の門だ。南へ回り、↑方向に進んで入ろう。';drawMap();return}px=nx;py=ny;se('step');const sw=SHRINE_SWITCHES.findIndex(q=>q.m===curMap&&q.x===px&&q.y===py);if(sw>=0&&!shrineActivated.includes(sw)){if(sw===shrineActivated.length){shrineActivated.push(sw);se('light');$('#msg').textContent=`ルーン ${sw+1}/3 が輝いた！`;if(shrineActivated.length===3)$('#msg').textContent='三つのルーンが共鳴した！ 生命の祭壇への道が開いた。'}else{shrineActivated=[];$('#msg').textContent='ルーンの順番が違う！ 光が消えてしまった…'}}const wp=DOORS[curMap+':'+px+','+py];if(wp){if(wp[0]==='lake'&&!shrineClear){$('#msg').textContent='湖へ続く道は翠の結界で閉ざされている。まず世界樹の守護獣を救おう。';px-=dx;py-=dy;drawMap();return}if(wp[0]==='cave'&&!lakeClear){$('#msg').textContent='炎の道は水の加護を必要としている。先に月鏡湖を訪れよう。';px-=dx;py-=dy;drawMap();return}if(wp[0]==='cave'&&!shrineClear){$('#msg').textContent='紅蓮岳の入口は古い樹根の封印で閉ざされている。先に古代樹の森で翠樹王の試練を受けよう。';px-=dx;py-=dy;drawMap();return}if(curMap==='runes'&&wp[0]==='altar'&&shrineActivated.length<3){$('#msg').textContent='祭壇の門は閉ざされている。3つのルーンを順番に起動しよう。';return}curMap=wp[0];MAP=MAPS[curMap];px=wp[1];py=wp[2];bgm(mapTrack());drawMap();$('#msg').textContent=curMap=='lake'?'第二章・月鏡湖。中央の桟橋を進み、湖心の祭壇へ向かおう。':curMap=='cave'?'紅蓮岳・灼熱の洞窟に 足をふみいれた…':curMap=='forest'?'第一章・古代樹の森。南の門を越えると、世界樹のルーンが呼びかける。北の神殿で翠樹王の試練に挑もう…':['roots','runes','altar'].includes(curMap)?'世界樹の神殿。古いルーンが静かに光る…':curMap=='world'?'フィールドに もどった。':'家に 入った。';return}drawMap();
 if(ch=='H'){se('heal');party.forEach(m=>m.hp=m.max);info();$('#msg').textContent='世界樹の灯の ぬくもりで なかまが かいふくした!';return}
 if((ch=='g'||ch=='G'||curMap=='cave'&&ch=='C')&&Math.random()<(curMap==='cave'?.105:['roots','runes'].includes(curMap)?.11:curMap==='forest'?.14:.18))enc()}
 let hold;const stop=()=>{clearInterval(hold);hold=0};
@@ -1058,7 +1083,7 @@ $('#mbtn').onclick=()=>{stop();openMenu()};$('#abtn').onclick=()=>{stop();act()}
 addEventListener('keydown',e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(d){e.preventDefault();mv(...d)}else if(e.key=='Enter'||e.key=='z'){e.preventDefault();act()}});
 function start(){info();$('#me').innerHTML='';$('#foe').innerHTML='';
 $('#msg').textContent='ヴァルハイム王国の 灯が きえかけている…。たびだつ なかまを えらぼう!';
-menu([...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};balls=5;pot=3;gold=0;keys=0;met=0;shrineClear=false;shrineActivated=[];px=7;py=7;curMap='world';MAP=WORLD;markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])]);
+menu([...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};balls=5;pot=3;gold=0;keys=0;met=0;shrineClear=false;lakeClear=false;shrineActivated=[];px=7;py=7;curMap='world';MAP=WORLD;markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])]);
 const starterMenu=$('#menu');starterMenu.classList.add('starter-select');
 const starterButtons=[...starterMenu.querySelectorAll('button')].filter(b=>!b.classList.contains('wide'));
 starterButtons.forEach((b,i)=>{const sp=SP[i];b.innerHTML='';const picture=draw(sp,76);picture.classList.add('starter-portrait');const name=document.createElement('strong');name.textContent=sp.n;const type=document.createElement('small');type.textContent=TN[sp.t];b.append(picture,name,type);b.setAttribute('aria-label',sp.n+'を選ぶ')});
@@ -1069,7 +1094,7 @@ const INTRO=[
 {kind:'title',html:'<div class="sub">灯が消えるとき、世界は凍る。</div><div class="logo">王国の灯</div><div class="sub">THE LIGHT OF THE KINGDOM</div>',button:'物語をはじめる'},
 {kind:'story',text:'千年もの間、世界樹の根元で燃え続けた「王国の灯」。\nその光は人々を守り、魔物たちと世界の均衡を保っていた。\nしかし今、灯は弱まり、世界には永遠の冬の影が迫っている。'},
 {kind:'story',text:'16年前、世界樹の根元でひとりの赤子が発見された。\n長老ヨルドに育てられたその子こそ、あなた。\nあなたには古代のルーンに応え、魔物と心を通わせる不思議な力があった。'},
-{kind:'story',text:'王国の灯を再び輝かせるため、四つの聖域を巡り、守護獣の力を集めよ。\n仲間となる魔物と共に、灯に隠された真実を探す旅が始まる。\nその先で待つのは、世界を凍らせようとする霜王の謎――。'}
+{kind:'story',text:'王国の灯を再び輝かせるため、六つの聖域を巡り、守護獣の力を集めよ。\n仲間となる魔物と共に、灯に隠された真実を探す旅が始まる。\nその先で待つのは、世界を凍らせようとする霜王の謎――。'}
 ];
 let introIndex=0;
 function titleChoice(){
