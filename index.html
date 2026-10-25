@@ -160,6 +160,20 @@ html,body{min-height:100%;}
 #menu.starter-select strong{font-size:clamp(11px,3.5vw,15px);white-space:nowrap}
 #menu.starter-select small{font-size:11px}
 #menu.starter-select .wide{grid-column:1/-1}
+
+/* 冒険地図：画面を覆い操作ボタンと干渉しない */
+#atlasOverlay{position:fixed;inset:0;z-index:85;background:#020711ed;display:none;align-items:center;justify-content:center;padding:12px env(safe-area-inset-right) 12px env(safe-area-inset-left)}
+#atlasPanel{width:min(100%,530px);max-height:94dvh;overflow-y:auto;border:3px double #e0b66b;border-radius:9px;background:linear-gradient(150deg,#15243a,#060c18);padding:12px;box-shadow:0 0 30px #000}
+#atlasPanel h2{margin:0 0 8px;color:#ffe2a1;font-size:20px;text-align:center}
+#atlasCanvas{display:block;width:100%;height:auto;image-rendering:pixelated;border:2px solid #b48a50;background:#152c34;animation:none}
+#atlasInfo{font-size:13px;line-height:1.6;min-height:3em;margin:10px 0;white-space:pre-line}
+#atlasClose{width:100%;padding:13px;font-size:16px}
+/* 世界地図と探索画面の仕上げ */
+#atlasPanel{background:linear-gradient(145deg,#1c2e3a,#07101b);border:3px double #f1cc82}
+#atlasCanvas{image-rendering:pixelated;touch-action:manipulation;cursor:pointer}
+#atlasInfo{background:#081521;border:1px solid #76664d;border-radius:5px;padding:10px;color:#f5e9ce}
+#map{image-rendering:pixelated;background:#10291f}
+#world{background:radial-gradient(ellipse at 50% 32%,#294b42,#0b1624 80%)}
 </style>
 <script>
 window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
@@ -173,7 +187,7 @@ window.addEventListener('unhandledrejection',function(e){var x=document.getEleme
 <h1>王国の灯 <button id="snd" aria-label="おとの オン・オフ">♪</button></h1><div id="audioControls" style="display:flex;gap:8px;align-items:center;justify-content:center;font-size:12px"><button id="testSound" type="button" style="padding:7px 12px;touch-action:manipulation">♪ 音を出す・テスト</button><span id="audioStatus" aria-live="polite">音が出ない時はこちら</span></div>
 <div id="top"></div>
 <div id="field"><div id="foe" class="side"></div><div id="me" class="side"></div></div>
-<div id="world"><canvas id="map" width="270" height="270"></canvas><div id="pad"><button data-d="0,-1" aria-label="上">▲</button><button data-d="-1,0" aria-label="左">◀</button><button data-d="1,0" aria-label="右">▶</button><button data-d="0,1" aria-label="下">▼</button></div><div id="exploreActions"><button id="abtn" type="button">決定</button><button id="mbtn" type="button">メニュー</button></div></div>
+<div id="atlasOverlay" role="dialog" aria-modal="true" aria-label="王国の世界地図"><div id="atlasPanel"><h2>✦ 王国の灯 ― 世界地図 ✦</h2><canvas id="atlasCanvas" width="480" height="390" aria-label="ヴァルハイム王国と四聖域の地図"></canvas><div id="atlasInfo"></div><button id="atlasClose" type="button">地図を閉じる</button></div></div><div id="world"><canvas id="map" width="270" height="270"></canvas><div id="pad"><button data-d="0,-1" aria-label="上">▲</button><button data-d="-1,0" aria-label="左">◀</button><button data-d="1,0" aria-label="右">▶</button><button data-d="0,1" aria-label="下">▼</button></div><div id="exploreActions"><button id="abtn" type="button">決定</button><button id="mbtn" type="button">メニュー</button></div></div>
 <div id="msg"></div>
 <div id="menu"></div>
 </div>
@@ -594,6 +608,24 @@ function paintTile(c,ch,X,Y,wx,wy){
  // 微細な陰影とタイル境界。解像度は32pxを維持。
  c.fillStyle='rgba(0,0,0,.10)';c.fillRect(X,Y+28,30,2);c.fillRect(X+28,Y,2,30);
 }
+// フィールド仕上げ: 大樹の樹影、神殿の光、灯火、川の輝き。
+// 当たり判定とイベント座標を変えない安全な描画レイヤー。
+function drawFinalEnvironment(c,vx,vy){
+ const glow=(x,y,r,col)=>{let g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,col);g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)};
+ c.save();
+ for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+  let wx=vx+i,wy=vy+j,ch=MAP[wy]?.[wx],X=i*T,Y=j*T;
+  if((curMap==='forest'||curMap==='roots'||curMap==='runes')&&ch==='T'){
+   c.fillStyle='rgba(0,20,17,.22)';c.fillRect(X+2,Y+23,28,6);
+   if((wx*13+wy*19)%7===0){c.fillStyle='#b6d77b';c.fillRect(X+4,Y+8,4,2);c.fillRect(X+18,Y+6,5,2)}
+  }
+  if(curMap==='world'&&(ch==='H'||ch==='O')&&(wx*5+wy)%3===0){glow(X+15,Y+14,21,'rgba(255,191,94,.23)')}
+  if(curMap==='forest'&&(ch==='E'||ch==='D')){glow(X+15,Y+15,35,'rgba(145,255,185,.32)');c.fillStyle='#b6f5cf';c.fillRect(X+14,Y+5,3,7)}
+  if(curMap==='altar'&&ch==='S'&&(wx+wy)%3===0)glow(X+15,Y+15,27,'rgba(255,237,166,.3)');
+  if(curMap==='cave'&&(ch==='Q'||ch==='H'))glow(X+15,Y+12,30,'rgba(255,151,52,.38)');
+ }
+ c.restore();
+}
 function drawMap(){const x=$('#map').getContext('2d'),vx=Math.min(Math.max(px-4,0),MAP[0].length-V),vy=Math.min(Math.max(py-4,0),MAP.length-V);
 for(let j=0;j<V;j++)for(let i=0;i<V;i++){let ch=MAP[vy+j][vx+i];const X=i*T,Y=j*T;x.fillStyle=ch=='D'&&keys?CL.p:CL[ch];x.fillRect(X,Y,T,T);paintTile(x,ch,X,Y,vx+i,vy+j);deco(x,ch,X,Y,(vx+i)*7+(vy+j)*13+(vx+i)*(vy+j));
 if(['roots','runes','altar'].includes(curMap)){x.fillStyle=ch==='T'?'rgba(37,76,52,.24)':ch==='S'?'rgba(195,172,112,.24)':'rgba(66,87,70,.15)';x.fillRect(X,Y,T,T);x.strokeStyle=ch==='T'?'#547c52':'#8b9e70';x.strokeRect(X+2,Y+2,26,26);if(ch==='T'){x.fillStyle='#80603a';x.fillRect(X+12,Y+13,6,17);x.fillStyle='#36794d';x.fillRect(X+4,Y+2,22,17)}if(curMap==='altar'&&ch==='S'){x.fillStyle='rgba(238,219,130,.35)';x.fillRect(X+7,Y+2,16,26)}}
@@ -655,7 +687,133 @@ function drawAreaAtmosphere(ctx,vx,vy){
  }
  c.restore();
 }
+
+// 街並み専用32pxドット絵レイヤー。元のマップ・当たり判定は変更しない。
+function drawTownDetails(c,vx,vy){
+ if(curMap!=='world')return;
+ const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
+ const hash=(a,b,k=0)=>{let n=Math.imul(a+41,374761393)^Math.imul(b+17,668265263)^Math.imul(k+1,2246822519);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295};
+ for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+  const wx=vx+i,wy=vy+j,ch=MAP[wy]?.[wx],X=i*T,Y=j*T;
+  if(ch==='~'||ch==='W'){
+   // 水面の深さ、さざ波、岸沿いの白い泡
+   r(X+1,Y+23,27,5,'#103758');
+   for(let n=0;n<5;n++){let a=3+Math.floor(hash(wx,wy,n)*23),b=3+Math.floor(hash(wx,wy,n+11)*21);r(X+a,Y+b,4+(n%3),1,n%2?'#57b3da':'#a0dced')}
+   if(wx>0&&!['~','W'].includes(MAP[wy]?.[wx-1])){r(X,Y,3,30,'#a9a28c');r(X+3,Y+5,2,3,'#d1c9ac')}
+   if(wy>0&&!['~','W'].includes(MAP[wy-1]?.[wx])){r(X,Y,30,3,'#b8ac91');r(X+5,Y+3,13,2,'#d2c7a7')}
+  }
+  if(ch==='R'){
+   // 青い瓦屋根と金属の棟飾り
+   r(X+1,Y+3,28,24,'#172d4b');r(X+3,Y+6,24,18,'#2b5485');
+   for(let k=0;k<4;k++){r(X+3,Y+7+k*5,24,2,k%2?'#527fae':'#3e6a9b');for(let z=0;z<4;z++)r(X+5+z*6+(k%2)*2,Y+9+k*5,2,2,'#173858')}
+   r(X+2,Y+25,26,3,'#a4a2a0');r(X+3,Y+1,24,2,'#b6b0a0');
+  }
+  if(ch==='O'){
+   // 木製の玄関、石壁、ランタン
+   r(X+2,Y+2,26,27,'#8b806b');r(X+5,Y+4,20,23,'#b4a58b');
+   r(X+9,Y+9,13,20,'#322b29');r(X+11,Y+11,9,17,'#684b32');
+   r(X+18,Y+19,2,2,'#f7d878');r(X+6,Y+6,17,2,'#e2d4b3');
+   r(X+3,Y+11,4,7,'#2d303b');r(X+4,Y+12,2,4,'#ffd481');
+  }
+  if(ch==='N'){
+   // 掲示板、木枠と紙の貼り紙
+   r(X+5,Y+4,21,18,'#543b28');r(X+7,Y+6,17,13,'#bb9360');
+   r(X+9,Y+8,6,8,'#e6d4a3');r(X+17,Y+9,5,7,'#d3bd8d');
+   r(X+10,Y+10,4,1,'#76644a');r(X+17,Y+12,4,1,'#76644a');
+   r(X+8,Y+21,3,9,'#69452d');r(X+21,Y+21,3,9,'#69452d');
+  }
+  if(ch==='H'){
+   // 宿屋・施設の光る入口
+   r(X+5,Y+6,20,23,'#524436');r(X+7,Y+8,16,19,'#856b50');
+   r(X+10,Y+11,10,15,'#342d2c');r(X+11,Y+13,8,9,'#e5a34e');
+   r(X+12,Y+14,6,7,'#ffda86');r(X+4,Y+3,22,4,'#4a688b');
+  }
+  if(ch==='p'||ch==='f'){
+   // 石畳の目地と光のハイライト
+   if(hash(wx,wy,8)>.55){r(X+4,Y+3,10,1,'rgba(255,242,202,.22)');r(X+19,Y+18,7,1,'rgba(34,39,39,.18)')}
+   // 水路を横断する石橋の欄干（通行可能な道タイルのみ）
+   const left=MAP[wy]?.[wx-1],right=MAP[wy]?.[wx+1];
+   if((left==='~'||left==='W')&&(right==='~'||right==='W')){
+    r(X,Y+2,30,3,'#d5c6a5');r(X,Y+24,30,3,'#6d6d68');
+    r(X+2,Y+1,4,7,'#d9cbb1');r(X+24,Y+1,4,7,'#d9cbb1');
+    r(X+2,Y+21,4,7,'#9c988c');r(X+24,Y+21,4,7,'#9c988c');
+   }
+  }
+  // 花壇と石造ランタン。通行可能な床の端に収める。
+  if((ch==='.'||ch==='g')&&hash(wx,wy,23)>.87){
+   r(X+3,Y+23,24,4,'#365b39');
+   for(let k=0;k<4;k++){const a=5+k*6,b=18+(k%2)*3;r(X+a,Y+b,3,3,k%2?'#f7d889':'#e6a4b6');r(X+a+1,Y+b-2,1,2,'#70b16a')}
+  }
+ }
+}
+
+// 古代樹の森専用：苔むす石畳、樹冠、精霊灯、古い橋と世界樹の門。
+// タイルの衝突判定は変更せず、描画レイヤーのみ追加。
+function drawForestDetails(c,vx,vy){
+ if(curMap!=='forest')return;
+ const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
+ const H=(x,y,k=0)=>tileRand(x,y,k);
+ for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+  const wx=vx+i,wy=vy+j,ch=MAP[wy]?.[wx],X=i*T,Y=j*T;
+  if(ch==='T'){
+   // 多層の樹冠。明るい葉と暗い葉を重ねて立体感をつける。
+   R(X+4,Y+21,22,8,'#172c24');R(X+12,Y+17,7,13,'#59442f');
+   const leaves=['#143e31','#20543b','#2d7048','#3b8051','#57985d'];
+   for(let k=0;k<11;k++){
+    const a=1+Math.floor(H(wx,wy,k+20)*23),b=1+Math.floor(H(wx,wy,k+42)*17);
+    R(X+a,Y+b,5+(k%3)*2,4+(k%2)*3,leaves[(k+Math.floor(H(wx,wy,91)*4))%5]);
+   }
+   R(X+6,Y+6,7,2,'#76b16a');R(X+20,Y+12,4,2,'#8dc27a');
+   if(H(wx,wy,92)>.78){R(X+14,Y+20,2,6,'#799f58');R(X+13,Y+25,4,2,'#c8d38b')}
+  }else if(ch==='p'||ch==='f'||ch==='D'||ch==='E'){
+   // 古い石畳の継ぎ目と苔。神殿へ続く道は見分けやすい。
+   R(X+1,Y+4,27,1,'#4c6558');R(X+2,Y+17,25,1,'#526f5f');
+   R(X+14,Y+5,1,11,'#435b50');R(X+7,Y+18,1,10,'#435b50');
+   for(let k=0;k<5;k++){
+    let a=2+Math.floor(H(wx,wy,k+51)*24),b=3+Math.floor(H(wx,wy,k+61)*24);
+    R(X+a,Y+b,2+k%3,2,k%2?'#6c9364':'#9baa7a');
+   }
+  }else if(ch==='g'||ch==='.'){
+   // シダ、キノコ、花、落ち葉。
+   for(let k=0;k<5;k++){
+    const a=2+Math.floor(H(wx,wy,k+11)*24),b=7+Math.floor(H(wx,wy,k+31)*18);
+    R(X+a,Y+b,2,8,'#285a3d');R(X+a-2,Y+b+2,6,2,k%2?'#69a967':'#4b8655');
+   }
+   if(H(wx,wy,80)>.6){R(X+20,Y+19,4,3,'#e5bc85');R(X+21,Y+16,2,3,'#f0e6c5')}
+  }
+  if(ch!=='T'&&H(wx,wy,99)>.88){
+   // 精霊の光。固定座標のため歩行中もちらつかない。
+   R(X+11,Y+8,8,8,'rgba(76,194,133,.12)');R(X+14,Y+11,3,3,'#c7f6b1');
+   R(X+15,Y+9,1,2,'#f4ffcf');
+  }
+ }
+ const local=(wx,wy,fn)=>{const X=(wx-vx)*T,Y=(wy-vy)*T;if(X<-T||Y<-T||X>=V*T||Y>=V*T)return;fn(X,Y)};
+ // 南門：二本の石柱と精霊の灯。
+ for(const wx of [9,13])local(wx,19,(X,Y)=>{
+  R(X+7,Y+8,16,20,'#4e6258');R(X+5,Y+6,20,5,'#a6ae88');
+  R(X+10,Y+13,10,12,'#7e9680');R(X+13,Y+2,4,6,'#f9da82');
+  R(X+12,Y+1,6,3,'#8edca0');
+ });
+ // 森の中央：古代樹のルーン石碑。話しかけられる既存のイベント地点を強調。
+ local(10,3,(X,Y)=>{
+  R(X+9,Y+11,13,17,'#3c594f');R(X+10,Y+8,11,5,'#92a88b');
+  R(X+14,Y+14,3,9,'#91f3c1');R(X+12,Y+18,7,2,'#c4e5b1');
+ });
+ // 北端：世界樹の神殿の入口を荘厳な樹根のアーチに。
+ for(const wx of [8,12])local(wx,1,(X,Y)=>{
+  R(X+8,Y+3,13,26,'#654d38');R(X+6,Y+2,17,7,'#92704b');
+  R(X+7,Y+1,16,3,'#b2a273');R(X+10,Y+9,5,13,'#476b48');
+ });
+ local(10,1,(X,Y)=>{
+  R(X+4,Y+2,22,5,'#8caa76');R(X+6,Y+7,18,3,'#d7c994');
+  R(X+12,Y+12,6,12,'#84cbb0');R(X+14,Y+13,2,8,'#e2ffe0');
+ });
+}
+
 drawAreaAtmosphere(x,vx,vy);
+drawTownDetails(x,vx,vy);
+drawFinalEnvironment(x,vx,vy);
+drawForestDetails(x,vx,vy);
 if(curMap==='runes')SHRINE_SWITCHES.forEach((q,i)=>{const ii=q.x-vx,jj=q.y-vy;if(ii>=0&&jj>=0&&ii<V&&jj<V){x.fillStyle=shrineActivated.includes(i)?'#e9f7a0':'#65e3b3';x.fillRect(ii*T+9,jj*T+6,12,19);x.fillStyle='#173d32';x.fillRect(ii*T+13,jj*T+9,4,10)}});
 if(curMap==='altar'&&!shrineClear){const i=9-vx,j=6-vy;if(i>=0&&j>=0&&i<V&&j<V){x.fillStyle='#d5b869';x.fillRect(i*T+4,j*T+23,23,6);x.drawImage(spr('ユグハッパ'),i*T-2,j*T-10,34,40)}}
 NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
@@ -735,8 +893,114 @@ if(n){talk(n.t(),0,n.s?shop:n.b===2?shrineBossGo:n.b?bossGo:0);return}
 const v=NOTES[curMap+':'+tx+','+ty];
 if(v=='bed'){se('heal');party.forEach(m=>m.hp=m.max);info();talk(['ぐっすり ねむった! なかまが かいふくした!']);return}
 if(v)talk(v)}
+
+// 王国の全体図。訪問済みの地域と、物語で明かされる未踏の聖域を表示する。
+// 第三世代ワールドマップ: ドット絵地形・ランドマーク・選択式地域ガイド
+const ATLAS_PLACES=[
+ {n:'ヴァルハイム',x:91,y:174,t:'castle',d:'物語の出発点。長老ヨルドと灯守の記憶が眠る村。',open:true},
+ {n:'港町リヴェラ',x:70,y:260,t:'port',d:'西海岸の港町。水の聖域へ向かう航路（今後実装）。',open:false},
+ {n:'風渡りの平原',x:175,y:206,t:'plain',d:'冒険の始まりとなる草原。草むらで仲間と出会える。',open:true},
+ {n:'紅蓮岳',x:242,y:168,t:'volcano',d:'灼熱の洞窟。魔竜ゴルヴァザークが封印を守る。',open:true},
+ {n:'古代樹の森',x:310,y:239,t:'forest',d:'南の門から北向きに入り、世界樹を目指す。',open:true},
+ {n:'世界樹の神殿',x:342,y:169,t:'tree',d:'三層の神殿と翠樹王ヴェルディオンの試練。',open:true},
+ {n:'霜王の領域',x:247,y:59,t:'icecastle',d:'霜王スリュムガルドの居城。物語終盤の地（今後実装）。',open:false},
+ {n:'氷の聖域',x:398,y:77,t:'ice',d:'凍てつく氷河と封じられた聖域（今後実装）。',open:false},
+ {n:'光の聖域',x:426,y:251,t:'light',d:'黄金の砂岩に建つ光の聖域（今後実装）。',open:false},
+ {n:'闇の湿地',x:159,y:315,t:'dark',d:'影が集まる紫の沼沢地（今後実装）。',open:false},
+ {n:'砂の遺跡',x:329,y:326,t:'desert',d:'失われた文明が眠る砂漠の遺跡（今後実装）。',open:false}
+];
+let atlasSelected=-1;
+function openAtlas(){
+ document.getElementById('atlasOverlay').style.display='flex';
+ const current=({world:'ヴァルハイム',hero:'ヴァルハイム',jord:'ヴァルハイム',cave:'紅蓮岳',forest:'古代樹の森',roots:'世界樹の神殿',runes:'世界樹の神殿',altar:'世界樹の神殿'})[curMap]||'ヴァルハイム';
+ atlasSelected=ATLAS_PLACES.findIndex(p=>p.n===current);drawAtlas();
+}
+function drawAtlas(){
+ const canvas=document.getElementById('atlasCanvas'),c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
+ const W=480,H=390;const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x|0,y|0,w,h)};
+ const rnd=(x,y,k=0)=>{let n=Math.imul(x+117,374761393)^Math.imul(y+61,668265263)^Math.imul(k+1,2246822519);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295};
+ const ellipse=(x,y,cx,cy,rx,ry)=>((x-cx)/rx)**2+((y-cy)/ry)**2;
+ const land=(x,y)=>{
+  let wobble=(rnd((x/18)|0,(y/18)|0)-.5)*.14;
+  let a=ellipse(x,y,224,192,190,145)+wobble;
+  let east=ellipse(x,y,369,210,80,112)+wobble;
+  let south=ellipse(x,y,286,318,115,54)+wobble;
+  let west=ellipse(x,y,77,183,56,89)+wobble;
+  return Math.min(a,east,south,west)<1;
+ };
+ // 紺碧の海、海岸線、泡とさざ波
+ for(let y=0;y<H;y+=4)for(let x=0;x<W;x+=4){const r=rnd(x/4,y/4);R(x,y,4,4,['#10405f','#135277','#17618a','#1c6991','#145078'][(r*5)|0])}
+ for(let y=8;y<H-8;y+=4)for(let x=8;x<W-8;x+=4){if(!land(x,y))continue;
+  const n=rnd(x/4,y/4),coast=(!land(x-6,y)||!land(x+6,y)||!land(x,y-6)||!land(x,y+6));
+  let palette=y<101?['#c0dbe0','#a7c8d6','#e4e7db','#849fae']:x>380&&y>180?['#d9bc78','#e6c987','#cfa963','#a88b62']:x<214&&y>278?['#263c48','#3a4c56','#4e4261','#514069']:['#3c7545','#4b8d4c','#66a253','#8ab35c'];
+  R(x,y,4,4,coast?'#c5b78d':palette[(n*palette.length)|0]);
+  if(coast&&n>.62)R(x+1,y+1,2,2,'#f6d8a0');
+ }
+ // 地域ごとの細密な森、雪、山脈、湿地、砂地
+ for(let i=0;i<3100;i++){
+  const x=14+((rnd(i,12)*451)|0),y=10+((rnd(i,18)*361)|0);if(!land(x,y))continue;
+  const n=rnd(i,33);
+  if(y<110){R(x,y,2+n*3|0,2,'#eff9ff');if(n>.77)R(x+1,y-3,2,3,'#a8c8dd')}
+  else if(x>384&&y>190){R(x,y,3,2,n>.5?'#f1d596':'#ad8755')}
+  else if(x<225&&y>278){R(x,y,4,3,n>.5?'#694b83':'#253c47');if(n>.9)R(x,y-4,2,4,'#aa6df1')}
+  else {R(x,y,4,4,n>.5?'#246a3b':'#2b7545');R(x+1,y-2,3,3,n>.5?'#5aa351':'#3c8a4d');if(n>.84)R(x+1,y-3,2,1,'#a2c86b')}
+ }
+ // 山の稜線（北の雪峰）
+ function mountain(x,y,size,snow=false){c.fillStyle=snow?'#6f8797':'#5e6567';c.beginPath();c.moveTo(x-size,y+size/2);c.lineTo(x,y-size);c.lineTo(x+size,y+size/2);c.fill();c.fillStyle=snow?'#f0faff':'#a6a69b';c.beginPath();c.moveTo(x,y-size);c.lineTo(x-size*.45,y-size*.2);c.lineTo(x+size*.25,y-size*.35);c.fill();R(x-1,y-size+3,2,4,snow?'#ffffff':'#c7bd9c')}
+ for(let i=0;i<18;i++)mountain(126+i*12,91+Math.sin(i*1.7)*14,13+(i%4)*3,true);
+ for(let i=0;i<8;i++)mountain(212+i*12,133+Math.sin(i)*9,9+(i%3)*3);
+ // 河川と街道、波
+ function path(pts,color,width,dash=[]){c.beginPath();c.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)c.lineTo(...pts[i]);c.strokeStyle=color;c.lineWidth=width;c.setLineDash(dash);c.stroke();c.setLineDash([])}
+ path([[135,92],[126,130],[156,161],[161,196],[180,237],[128,284]],'#15547b',11);
+ path([[135,92],[126,130],[156,161],[161,196],[180,237],[128,284]],'#4eb6cf',5);
+ path([[91,174],[175,206],[242,168],[310,239],[342,169]],'#f2dca1',3,[3,5]);
+ path([[91,174],[70,260]],'#f2dca1',3,[3,5]);
+ path([[175,206],[159,315]],'#f2dca1',2,[2,6]);
+ for(let i=0;i<150;i++){let x=(rnd(i,92)*W)|0,y=(rnd(i,93)*H)|0;if(!land(x,y)){R(x,y,6,1,i%2?'#5eb8d7':'#9dddf0');if(i%6===0)R(x+2,y+2,3,1,'#1a7ca2')}}
+ // ランドマーク: ピクセル建造物、神樹、火山、遺跡
+ function icon(p){const x=p.x,y=p.y;
+  if(p.t==='castle'||p.t==='port'||p.t==='icecastle'){
+   let roof=p.t==='icecastle'?'#d6e7f2':'#367cbb',stone=p.t==='icecastle'?'#9ab9d0':'#d6c8a3';
+   R(x-14,y-11,28,24,stone);R(x-10,y-20,8,14,stone);R(x+3,y-24,8,18,stone);R(x-16,y-17,9,7,roof);R(x+1,y-30,12,8,roof);R(x-3,y+2,7,11,'#584d52');R(x-16,y+13,32,3,'#685e58');
+  }else if(p.t==='volcano'){
+   c.fillStyle='#4a3031';c.beginPath();c.moveTo(x-21,y+17);c.lineTo(x-5,y-17);c.lineTo(x+2,y-12);c.lineTo(x+9,y-26);c.lineTo(x+25,y+17);c.fill();
+   R(x-3,y-19,8,7,'#f76a28');R(x,y-26,4,9,'#ffd04c');R(x-10,y+5,3,9,'#ef6a2b');
+  }else if(p.t==='tree'||p.t==='forest'){
+   R(x-3,y-2,7,24,'#775637');for(let i=0;i<16;i++){let dx=(rnd(i,61)*34)|0,dy=(rnd(i,63)*24)|0;R(x-17+dx,y-24+dy,8,8,['#124f37','#2b8150','#54ad64','#78c77c'][i%4])}if(p.t==='tree'){R(x-2,y-32,5,13,'#9bffe2');R(x-10,y-26,18,3,'#a7fff2')}}
+  else if(p.t==='ice'){for(let i=0;i<5;i++){let dx=(i-2)*7;c.fillStyle=i%2?'#8de6ff':'#d8faff';c.beginPath();c.moveTo(x+dx-5,y+14);c.lineTo(x+dx,y-18-(i%3)*6);c.lineTo(x+dx+6,y+14);c.fill()}}
+  else if(p.t==='desert'||p.t==='light'){R(x-16,y-5,32,18,'#e4c28b');R(x-10,y-17,20,14,'#f3db9e');for(let i=0;i<4;i++)R(x-10+i*6,y-15,3,12,'#a98b62');R(x-18,y+12,36,3,'#a77f54')}
+  else if(p.t==='dark'){for(let i=0;i<5;i++){let dx=(i-2)*8;R(x+dx,y-12-i%2*6,5,25,'#3b304e');R(x+dx+1,y-18-i%2*6,3,8,'#9e62e0')}}
+  else if(p.t==='plain'){for(let i=0;i<10;i++){let dx=(rnd(i,4)*34)|0,dy=(rnd(i,5)*19)|0;R(x-17+dx,y-9+dy,3,5,i%2?'#f6da75':'#8dca69')}}
+ }
+ ATLAS_PLACES.forEach(icon);
+ // 方位記号と小さな装飾
+ c.textAlign='center';c.textBaseline='middle';c.fillStyle='#ffe3a2';c.font='bold 13px sans-serif';c.fillText('N',25,28);c.fillText('S',25,77);c.fillText('W',6,51);c.fillText('E',45,51);path([[25,33],[19,51],[25,70],[31,51],[25,33]],'#edce86',2);path([[11,51],[39,51]],'#edce86',1);
+ // タップ可能な地名プレート
+ ATLAS_PLACES.forEach((p,i)=>{
+  let selected=i===atlasSelected;let width=Math.max(65,Math.min(116,p.n.length*12+16));let lx=Math.min(W-width-3,Math.max(3,p.x-width/2));let ly=p.y+21;
+  if(ly+21>H)ly=p.y-46;
+  p.hit={x:lx,y:ly,w:width,h:20};
+  R(lx,ly,width,20,selected?'#22576a':'#08151ce9');c.strokeStyle=selected?'#9cf9fa':'#dfb971';c.lineWidth=selected?2:1;c.strokeRect(lx+.5,ly+.5,width-1,19);
+  c.fillStyle=p.open?'#fff0c5':'#c2cbd1';c.font='bold 11px sans-serif';c.fillText(p.n,lx+width/2,ly+10);
+  if(!p.open){R(lx+width-9,ly+2,6,6,'#e6bd77');R(lx+width-10,ly+7,8,8,'#98784c')}
+  if(selected){c.strokeStyle='#9df7ff';c.lineWidth=2;c.strokeRect(p.x-21,p.y-35,42,55)}
+ });
+ c.textAlign='left';c.font='bold 12px sans-serif';c.fillStyle='#fce3a9';c.fillText('王国の灯  WORLD MAP',74,15);
+ const current=ATLAS_PLACES[atlasSelected];const status=shrineClear?'世界樹の加護を獲得':keys?'炎の封印の鍵を獲得':'紅蓮岳の魔竜を追う';
+ document.getElementById('atlasInfo').textContent=(current?'選択：'+current.n+'\n'+current.d+'\n':'')+'旅の進行：'+status+'\n地名をタップすると地域情報を表示。🔒は今後開放予定。';
+}
+document.getElementById('atlasCanvas').addEventListener('click',function(e){
+ const rect=this.getBoundingClientRect(),x=(e.clientX-rect.left)*this.width/rect.width,y=(e.clientY-rect.top)*this.height/rect.height;
+ let i=ATLAS_PLACES.findIndex(p=>p.hit&&x>=p.hit.x&&x<=p.hit.x+p.hit.w&&y>=p.hit.y&&y<=p.hit.y+p.hit.h);
+ if(i<0)i=ATLAS_PLACES.findIndex(p=>Math.abs(x-p.x)<22&&Math.abs(y-p.y)<25);
+ if(i>=0){atlasSelected=i;drawAtlas()}
+});
+function closeAtlas(){document.getElementById('atlasOverlay').style.display='none'}
+document.getElementById('atlasClose').addEventListener('click',closeAtlas);
+document.getElementById('atlasOverlay').addEventListener('click',e=>{if(e.target.id==='atlasOverlay')closeAtlas()});
+
 function openMenu(){if(!inMap)return;inMap=false;mainMenu()}
-function mainMenu(){$('#msg').textContent=`メニュー\nしょじきん ${gold}G　カギ ${keys}/4`;menu([["ステータス",stMenu],["図鑑",dexMenu],["あいしょう",chartMenu],["牧場",farmMenu],["アイテム",itMenu],["セーブ",saveGame],["とじる",goMap]])}
+function mainMenu(){$('#msg').textContent=`メニュー\nしょじきん ${gold}G　カギ ${keys}/4`;menu([["世界地図",openAtlas],["ステータス",stMenu],["図鑑",dexMenu],["あいしょう",chartMenu],["牧場",farmMenu],["アイテム",itMenu],["セーブ",saveGame],["とじる",goMap]])}
 function dexMenu(){const L=allSpecies(),k=L.filter(s=>dex[s.n]);$('#msg').textContent=`モンスター図鑑　${k.length} / ${L.length}\nモンスターを選ぶと姿・進化・技を確認できる。`;menu([['全モンスター図鑑（グラフィック）',dexGallery,'wide'],...L.map((s,i)=>[`${String(i+1).padStart(2,'0')} ${s.n}<small>${TN[s.t]||s.t}${s.t2?'/'+(TN[s.t2]||s.t2):''}　${dex[s.n]?'発見済':'未発見'}</small>`,()=>dexDetail(s)]),['もどる',mainMenu,'wide']])}
 function dexLine(sp){const predecessors=Object.entries(EVO).filter(([n,e])=>e.n===sp.n).map(([n])=>n);let root=sp.n;while(true){const prev=Object.entries(EVO).find(([n,e])=>e.n===root);if(!prev)break;root=prev[0]}const chain=[root];while(EVO[chain[chain.length-1]])chain.push(EVO[chain[chain.length-1]].n);return chain}
 function dexSpecies(n){return allSpecies().find(s=>s.n===n)||Object.values(EVO).find(s=>s.n===n)}
@@ -753,10 +1017,10 @@ function stDetail(m){$('#msg').textContent=`${m.sp.n} Lv${m.lv} (${TN[m.sp.t]}${
 function itMenu(){$('#msg').textContent=`もちもの\nきずぐすり ×${pot}${keys?'\nほのおの封印のカギ':''}`;menu([[`きずぐすり<small>HP30かいふく</small>`,potMenu],["もどる",mainMenu]])}
 function potMenu(){if(!pot){$('#msg').textContent='きずぐすりが ない!';return}$('#msg').textContent='だれに つかう?';
 menu([...party.map(m=>[`${m.sp.n}<small>HP ${m.hp}/${m.max}</small>`,()=>{if(m.hp>=m.max){$('#msg').textContent='HPは まんたんだ!';return}pot--;m.hp=Math.min(m.max,m.hp+30);$('#msg').textContent=`${m.sp.n}の HPが かいふくした!`;setTimeout(itMenu,900)}]),["もどる",itMenu,'wide']])}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({p:party.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),b:storage.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),d:dex,c:party.indexOf(cur),balls,pot,gold,px:curMap=='world'?px:EXIT[curMap][0],py:curMap=='world'?py:EXIT[curMap][1],met,keys,shrineClear,shrineActivated}));return 1}catch(e){return 0}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({p:party.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),b:storage.map(m=>[m.sp.n,m.lv,m.xp,m.hp,m.max,m.learned||null]),d:dex,c:party.indexOf(cur),balls,pot,gold,px,py,curMap,met,keys,shrineClear,shrineActivated}));return 1}catch(e){return 0}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 function saveGame(){$('#msg').textContent=save()?'セーブした!':'セーブに しっぱいした…(このブラウザでは つかえないかも)';menu([["もどる",mainMenu,'wide']])}
-function cont(){const s=load();if(!s)return;const f=n=>(n=RN[n]||n,0)||SP.find(x=>x.n==n)||Object.values(EVO).find(x=>x.n==n)||RARE.find(x=>x.n==n)||VOLC.find(x=>x.n==n);party=s.p.map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));storage=(s.b||[]).map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));dex=s.d||{};party.forEach(m=>markDex(m.sp.n));party.forEach(m=>{if(!m.learned)m.learned=teach(m)});storage.forEach(m=>{if(!m.learned)m.learned=teach(m)});cur=party[Math.max(0,s.c)];({balls,pot,gold,px,py,met}=s);keys=s.keys||0;shrineClear=!!s.shrineClear;shrineActivated=s.shrineActivated||[];if(shrineClear){const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1)}if(keys){const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1)}curMap='world';MAP=WORLD;goMap()}
+function cont(){const s=load();if(!s)return;const f=n=>(n=RN[n]||n,0)||SP.find(x=>x.n==n)||Object.values(EVO).find(x=>x.n==n)||RARE.find(x=>x.n==n)||VOLC.find(x=>x.n==n);party=s.p.map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));storage=(s.b||[]).map(([n,lv,xp,hp,max,learned])=>({sp:f(n),lv,xp,hp,max,learned:learned||null}));dex=s.d||{};party.forEach(m=>markDex(m.sp.n));party.forEach(m=>{if(!m.learned)m.learned=teach(m)});storage.forEach(m=>{if(!m.learned)m.learned=teach(m)});cur=party[Math.max(0,s.c)];({balls,pot,gold,px,py,met}=s);keys=s.keys||0;shrineClear=!!s.shrineClear;shrineActivated=s.shrineActivated||[];if(shrineClear){const j=NPCS.findIndex(n=>n.b===2);if(j>=0)NPCS.splice(j,1)}if(keys){const i=NPCS.findIndex(n=>n.b);if(i>=0)NPCS.splice(i,1)}curMap=MAPS[s.curMap]?s.curMap:'world';MAP=MAPS[curMap];if(!Number.isFinite(px)||!Number.isFinite(py)||!MAP[py]||!MAP[py][px]){curMap='world';MAP=WORLD;px=7;py=7}goMap()}
 NPCS.push({x:27,y:9,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#2f7be0'},t:()=>['旅の剣士ロルフ:「東の湖の むこうには 光の神殿が あるらしい。」','「南の平原を回り込んで、北向きに森の門をくぐれ。世界樹の守護獣が待っているそうだ。」','「道ばたの 灯の ほこらで やすめるから、むりは するなよ。」']});
 NPCS.push({x:9,y:7,g:MER,p:{...MERP,h:'#c0402a',H:'#8a2a1a',m:'#f0c8a0',o:'#f08ab0',B:'#f08ab0',r:'#ffd070'},t:()=>['少女ミナ:「あなたが ひろわれた 夜は、灯が とても あかるく もえたって おばあちゃんが いってたよ。」','「ヨルドさんは やさしいけど、ときどき 灯を みつめて さみしそうなの。」']});
 NPCS.push({x:2,y:8,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#5a8a3a'},t:()=>['農夫ハルド:「むかしは 灯守さまが いたそうだが、いつからか だれも おぼえとらん。」','「どうして わすれてしまったのかのう…」']});
@@ -794,12 +1058,11 @@ $('#mbtn').onclick=()=>{stop();openMenu()};$('#abtn').onclick=()=>{stop();act()}
 addEventListener('keydown',e=>{const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(d){e.preventDefault();mv(...d)}else if(e.key=='Enter'||e.key=='z'){e.preventDefault();act()}});
 function start(){info();$('#me').innerHTML='';$('#foe').innerHTML='';
 $('#msg').textContent='ヴァルハイム王国の 灯が きえかけている…。たびだつ なかまを えらぼう!';
-menu([...(load()?[["つづきから",cont,'wide']]:[]),...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])]);
+menu([...SP.slice(0,3).map(sp=>[`${sp.n}<small>${TN[sp.t]}</small>`,()=>{party=[mk(sp,TEST20?19:TEST?11:5)];storage=[];dex={};balls=5;pot=3;gold=0;keys=0;met=0;shrineClear=false;shrineActivated=[];px=7;py=7;curMap='world';MAP=WORLD;markDex(sp.n,true);if(TEST)party[0].xp=109;if(TEST20)party[0].xp=389;cur=party[0];goMap()}])]);
 const starterMenu=$('#menu');starterMenu.classList.add('starter-select');
 const starterButtons=[...starterMenu.querySelectorAll('button')].filter(b=>!b.classList.contains('wide'));
 starterButtons.forEach((b,i)=>{const sp=SP[i];b.innerHTML='';const picture=draw(sp,76);picture.classList.add('starter-portrait');const name=document.createElement('strong');name.textContent=sp.n;const type=document.createElement('small');type.textContent=TN[sp.t];b.append(picture,name,type);b.setAttribute('aria-label',sp.n+'を選ぶ')});
 }
-start();
 // 初回起動時の演出。セーブがある場合も毎回ロゴを表示し、続きから選べる。
 const INTRO=[
 {kind:'studio',html:'<div class="sub">PRESENTED BY</div><div class="studio">MOCHI GAME</div><div class="sub">A FANTASY ROLE-PLAYING GAME</div>',button:'次へ'},
@@ -809,7 +1072,22 @@ const INTRO=[
 {kind:'story',text:'王国の灯を再び輝かせるため、四つの聖域を巡り、守護獣の力を集めよ。\n仲間となる魔物と共に、灯に隠された真実を探す旅が始まる。\nその先で待つのは、世界を凍らせようとする霜王の謎――。'}
 ];
 let introIndex=0;
-function showIntro(){const root=document.getElementById('cinema');if(introIndex>=INTRO.length){root.remove();return}const a=INTRO[introIndex];root.innerHTML='<div class="scene">'+(a.html||'<div class="sub">PROLOGUE · '+(introIndex-1)+'/3</div><div class="story"></div>')+'<button id="introNext">'+(a.button|| (introIndex===INTRO.length-1?'冒険を始める':'次へ'))+'</button><button id="introSound" type="button" style="margin-top:8px;padding:8px;background:#163a4a;color:#fff;border:1px solid #76b9d6">♪ 音声テスト</button></div>';root.querySelector('#introSound').onclick=()=>unlockAudio();if(a.text)root.querySelector('.story').textContent=a.text;root.querySelector('#introNext').onclick=async()=>{await unlockAudio();se('ui');introIndex++;showIntro();if(introIndex>=INTRO.length){bgm(mapTrack())}}}
+function titleChoice(){
+ const root=document.getElementById('cinema');if(!root)return;
+ const hasSave=!!load();
+ root.innerHTML='<div class="scene"><div class="sub">灯が消えるとき、世界は凍る。</div><div class="logo">王国の灯</div><div class="sub">THE LIGHT OF THE KINGDOM</div><div class="sub" style="margin:16px 0">冒険を選んでください</div>'+(hasSave?'<button id="continueGame" type="button">▶ 続きから</button>':'')+'<button id="newGame" type="button" style="margin-top:12px">◆ 最初から</button><button id="introSound" type="button" style="margin-top:12px;padding:8px;background:#163a4a;color:#fff;border:1px solid #76b9d6">♪ 音声テスト</button></div>';
+ root.querySelector('#introSound').onclick=()=>unlockAudio();
+ const resume=root.querySelector('#continueGame');if(resume)resume.onclick=async()=>{await unlockAudio();se('ui');root.remove();cont()};
+ root.querySelector('#newGame').onclick=async()=>{await unlockAudio();se('ui');if(hasSave&&!confirm('最初から始めますか？ 現在のセーブは次にセーブするまで残ります。'))return;introIndex=2;showIntro()};
+}
+function showIntro(){
+ const root=document.getElementById('cinema');if(!root)return;
+ if(introIndex===1){titleChoice();return}
+ if(introIndex>=INTRO.length){root.remove();start();bgm(mapTrack());return}
+ const a=INTRO[introIndex];root.innerHTML='<div class="scene">'+(a.html||'<div class="sub">PROLOGUE · '+(introIndex-1)+'/3</div><div class="story"></div>')+'<button id="introNext">'+(a.button||(introIndex===INTRO.length-1?'仲間を選ぶ':'次へ'))+'</button><button id="introSound" type="button" style="margin-top:8px;padding:8px;background:#163a4a;color:#fff;border:1px solid #76b9d6">♪ 音声テスト</button></div>';
+ root.querySelector('#introSound').onclick=()=>unlockAudio();if(a.text)root.querySelector('.story').textContent=a.text;
+ root.querySelector('#introNext').onclick=async()=>{await unlockAudio();se('ui');introIndex++;showIntro()};
+}
 showIntro();
 // Safari starts audio on the first user tap; retain the same track across prologue pages.
 bgm('overture');
