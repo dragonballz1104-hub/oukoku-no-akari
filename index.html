@@ -792,8 +792,42 @@ const REFERENCE_STARTER_PNG={"ヒノコン":"iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAY
 const REFERENCE_STARTER_IMAGES={};
 for(const [n,b64] of Object.entries(REFERENCE_STARTER_PNG)){const img=new Image();img.onload=()=>{MONSTER_BATTLE64_CACHE.delete(n);try{if(typeof draw==='function'&&typeof show==='function'&&document.querySelector('#me')){const target=document.querySelector('#me .spr');if(target&&target.parentNode){const sp=({n});const art=draw(sp,128);art.className=target.className;target.replaceWith(art)}}}catch(e){}};img.src='data:image/png;base64,'+b64;REFERENCE_STARTER_IMAGES[n]=img;}
 
+// 野生・レア・ボス用：各個体のART3形状を基に64×64の独立ドット配列を構築。
+// 透明・輪郭・ハイライト・基本色・影・アクセントの最大6文字で表す。
+const WILD_PIXEL64={};
+function makeWild64(name){
+ if(WILD_PIXEL64[name])return WILD_PIXEL64[name];
+ const art=ART3[name];if(!art||!Array.isArray(art.s))return null;
+ const N=64,raw=Array.from({length:N},()=>Array(N).fill('.'));
+ const palette={'.':null,'K':'#10151e','H':'#f3e7b5','B':art.c.a||'#8d9a80','S':art.c.d||'#344451','A':art.c.b||art.c.r||'#b9c9a0'};
+ const hex=(h)=>{const m=/^#([0-9a-f]{6})$/i.exec(h||'');return m?[parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)]:[110,150,110]};
+ const base=hex(palette.B),light=base.map(v=>Math.min(255,Math.round(v*.72+65))),shadow=base.map(v=>Math.round(v*.52));
+ palette.H='#'+light.map(v=>v.toString(16).padStart(2,'0')).join('');
+ palette.S='#'+shadow.map(v=>v.toString(16).padStart(2,'0')).join('');
+ const isInside=(sh,x,y)=>{
+  if(sh[0]==='e'){const [,cx,cy,rx,ry]=sh;return ((x-cx)/rx)**2+((y-cy)/ry)**2<=1;}
+  const P=sh[1];let inside=false;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){if((P[i+1]>y)!==(P[j+1]>y)&&x<(P[j]-P[i])*(y-P[i+1])/(P[j+1]-P[i+1])+P[i])inside=!inside;}return inside;
+ };
+ // 元の32ドット形状を64ドット座標に展開し、曲線と角を1ドット単位で整える。
+ for(const sh of art.s){const col=sh[0]==='e'?sh[5]:sh[2];const flat=sh[0]==='e'?sh[6]:sh[3];
+  for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++)if(isInside(sh,(x+.5)/2,(y+.5)/2)){
+   let key=col==='k'?'K':col==='w'?'H':col==='b'||col==='r'||col==='u'?'A':'B';
+   if(!flat&&key==='B'){const cx=x/N,cy=y/N;key=cy>.69||cx>.76?'S':cy<.34||cx<.40?'H':'B';}
+   raw[y][x]=key;
+  }
+ }
+ // 瞳を小さく調整し、白目を大きくしない。輪郭は外側1ドットのみ。
+ const filled=(x,y)=>x>=0&&x<N&&y>=0&&y<N&&raw[y][x]!=='.';
+ const out=raw.map(row=>row.slice());
+ for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++)if(raw[y][x]==='.'&&[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>filled(x+dx,y+dy)))out[y][x]='K';
+ // 元の細かな顔パーツはそのまま残し、左上からの光を1ドットのハイライトで表現。
+ const rows=out.map(row=>row.join(''));WILD_PIXEL64[name]={rows,palette};return WILD_PIXEL64[name];
+}
+function wildCanvas64(name){const art=makeWild64(name);if(!art)return null;const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.imageSmoothingEnabled=false;for(let y=0;y<64;y++)for(let x=0;x<64;x++){const col=art.palette[art.rows[y][x]];if(col){g.fillStyle=col;g.fillRect(x,y,1,1)}}return c;}
+const WILD_STARTERS=new Set(['ヒノコン','ヒノリュウ','ヒノガルド','アカツキヒノガルド','ミズクル','ミズレオ','ミズレヴィア','カイオウミズレヴィア','ハッパ','リーフォン','ユグハッパ','シンリュウユグハッパ']);
 function monsterBattle64(sp){
  const name=sp.n;if(MONSTER_BATTLE64_CACHE.has(name))return MONSTER_BATTLE64_CACHE.get(name);
+ if(!WILD_STARTERS.has(name)){const unique=wildCanvas64(name);if(unique){MONSTER_BATTLE64_CACHE.set(name,unique);return unique;}}
  const ref=REFERENCE_STARTER_IMAGES[name];if(ref&&ref.complete&&ref.naturalWidth){const raw=document.createElement('canvas');raw.width=raw.height=64;const ctx=raw.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(ref,0,0);MONSTER_BATTLE64_CACHE.set(name,raw);return raw;}
  const custom=originalStarterSprite(name);if(custom){MONSTER_BATTLE64_CACHE.set(name,custom);return custom;}
  const rows=MONSTER_PIXELS_16[name];if(!rows)return null;
