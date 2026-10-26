@@ -1637,10 +1637,10 @@ function drawApprovedHero(ctx,x,y,dir){
  const image=approvedHeroImages[key];
  if(image&&image.complete&&image.naturalWidth){
   ctx.save();ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(image,x-2,y-4,34,34);ctx.restore();
+  ctx.drawImage(image,x-8,y-16,46,46);ctx.restore();
  }else{
   const old=dir[1]>0?'hero_front':dir[1]<0?'hero_back':'hero_side';
-  paintCharacter16(ctx,CHARACTER_16[old],x,y,30,30,PIXEL16_COLORS,dir[0]===-1);
+  paintCharacter16(ctx,CHARACTER_16[old],x-8,y-16,46,46,PIXEL16_COLORS,dir[0]===-1);
  }
 }
 function drawHeroFacing(ctx,x,y,dir){
