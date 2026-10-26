@@ -253,81 +253,88 @@ const STARTER_BACK128 = {"ヒノコン":"iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAAD
 // 究極進化3種：画像ファイルを使わず、256×256キャンバスへ図形・ドットを直接描画。
 // 御三家・究極進化専用。外部画像を使用せず、256x256のCanvasに直接ドット描画。
 const ULTIMATE_PIXEL_NAMES=new Set(['アカツキヒノガルド','カイオウミズレヴィア','シンリュウユグハッパ']);
+// 究極進化：Lv36の既存ドット配列を原画にして256pxへ描き足す。
+// PNG/JPEG・画像生成素材は一切使わない。Canvasの整数座標ドットのみ。
 function drawUltimate256(sp,view='front'){
  if(!sp||!ULTIMATE_PIXEL_NAMES.has(sp.n))return null;
- const back=view==='back',fire=sp.n==='アカツキヒノガルド',water=sp.n==='カイオウミズレヴィア';
- const c=document.createElement('canvas');c.width=256;c.height=256;c.className='ultimate-256';c.style.cssText='image-rendering:pixelated;object-fit:contain;max-width:100%;width:128px;height:128px';
+ const kind=sp.n==='アカツキヒノガルド'?'fire':sp.n==='カイオウミズレヴィア'?'water':'grass';
+ const sourceName={fire:'ヒノガルド',water:'ミズレヴィア',grass:'ユグハッパ'}[kind];
+ const src=sprite128For(sourceName);if(!src)return null;
+ const back=view==='back';
+ const c=document.createElement('canvas');c.width=c.height=256;c.className='ultimate-256';
+ c.style.cssText='image-rendering:pixelated;object-fit:contain;width:128px;height:128px;max-width:100%';
  const g=c.getContext('2d');g.imageSmoothingEnabled=false;
- const p=fire?['#341222','#79202a','#b93227','#f45c22','#ffad35','#fff09b','#ffe0a3']:water?['#102442','#174780','#1766b2','#189bdf','#60d8fa','#e7ffff','#dbb96a']:['#19352b','#355438','#39784a','#53ac60','#9bd45e','#f3f6ad','#9d6c40'];
- const [edge,deep,shadow,base,light,shine,gold]=p;
- const path=(pts,col,stroke=edge,sw=2)=>{g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fillStyle=col;g.fill();if(stroke){g.lineWidth=sw;g.strokeStyle=stroke;g.lineJoin='miter';g.stroke()}};
- const ln=(pts,col,w=2)=>{g.beginPath();g.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)g.lineTo(...pts[i]);g.strokeStyle=col;g.lineWidth=w;g.lineCap='butt';g.lineJoin='miter';g.stroke()};
- const oval=(x,y,rx,ry,col,stroke=edge,sw=2)=>{g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=col;g.fill();if(stroke){g.lineWidth=sw;g.strokeStyle=stroke;g.stroke()}};
- const tri=(x,y,dx,dy,col=shine)=>path([[x-5,y+4],[x+dx,y+dy],[x+6,y+5]],col,edge,2);
- const leaf=(x,y,dx,dy,col=light)=>{path([[x,y],[x+dx*.32-dy*.28,y+dy*.32+dx*.28],[x+dx,y+dy],[x+dx*.32+dy*.28,y+dy*.32-dx*.28]],col,edge,1);ln([[x,y],[x+dx,y+dy]],shadow,1)};
- const spark=(x,y,s=2,col=shine)=>{g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),s,s);g.fillRect(Math.round(x-s),Math.round(y+s),s,s);g.fillRect(Math.round(x+s),Math.round(y+s),s,s)};
- const flame=(x,y,k=1)=>{path([[x-7*k,y+13*k],[x-11*k,y-1*k],[x-4*k,y-18*k],[x,y-8*k],[x+7*k,y-26*k],[x+12*k,y-2*k],[x+7*k,y+13*k]],base,edge,1);path([[x-4*k,y+10*k],[x-3*k,y-3*k],[x+5*k,y-13*k],[x+7*k,y+10*k]],shine,null)};
- const claw=(x,y,dir=1)=>path([[x-5,y-5],[x+4,y-3],[x+dir*10,y+9],[x+dir*2,y+6]],shine,edge,1);
- // 前後で別の造形。両方とも画面内に全身が入る固定構図。
- if(!back){g.save();g.translate(256,0);g.scale(-1,1)}
- // 尾：節を重ねた長い胴尾
- ln([[132,156],[105,171],[77,186],[51,181],[30,165],[19,139]],edge,24);
- ln([[132,156],[105,171],[77,186],[51,181],[30,165],[19,139]],shadow,18);
- ln([[128,152],[103,166],[75,180],[50,175],[29,158]],base,8);
- for(let i=0;i<12;i++){const x=27+i*8,y=158+Math.sin(i*.4)*17;tri(x,y,-3,-10,i%3===0?shine:light)}
- if(fire){flame(18,123,1.18);for(let i=0;i<9;i++)flame(29+i*13,183+(i%3)*5,.2)}
- if(water){for(let i=0;i<7;i++){let x=18+i*9,y=135-i*3;path([[x,y],[x-7,y-17],[x+5,y-31],[x+10,y-9]],i%2?light:base,edge,1)}}
- if(!fire&&!water){for(let i=0;i<11;i++)leaf(22+i*8,146+i%3*12,-12,-15,i%2?light:base)}
- // 奥側の脚
- for(const [x,y] of [[101,177],[159,174]]){path([[x-14,y-12],[x+13,y-14],[x+20,y+27],[x-16,y+28]],deep);path([[x-9,y-10],[x+7,y-12],[x+13,y+17],[x-12,y+17]],shadow,null);for(let j=0;j<3;j++)claw(x-11+j*11,y+27)}
- // 大型シルエット：翼 / 海流 / 樹冠
- if(fire){
-  for(let side=0;side<2;side++){
-   const o=side?146:116,sg=side?1:-1;
-   path([[o,142],[o+sg*22,92],[o+sg*49,29],[o+sg*43,74],[o+sg*80,45],[o+sg*62,112],[o+sg*94,103],[o+sg*64,150]],deep,edge,3);
-   for(let j=0;j<12;j++){let t=j/11,x=o+sg*(16+72*t),y=138-75*Math.sin(Math.PI*t*.82)-j*1.7;path([[o,141],[x-sg*8,y+11],[x+sg*5,y-18],[x+sg*12,y+7]],j%3===0?shine:j%2?light:base,edge,1);ln([[o,139],[x+sg*5,y+2]],gold,1)}
+ const P={fire:{edge:'#45121b',dark:'#932016',base:'#ee4916',light:'#ff9d28',shine:'#ffe58a',aura:'#ff5716'},water:{edge:'#102b57',dark:'#1652a0',base:'#238de2',light:'#76d6ff',shine:'#e4fbff',aura:'#23b9ff'},grass:{edge:'#193a22',dark:'#28673a',base:'#54a54d',light:'#b5dc5b',shine:'#fff4b1',aura:'#86d650'}}[kind];
+ const dot=(x,y,color,w=1,h=1)=>{g.fillStyle=color;g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)))};
+ const line=(x1,y1,x2,y2,color,th=2)=>{const n=Math.max(Math.abs(x2-x1),Math.abs(y2-y1));for(let i=0;i<=n;i++){const t=i/Math.max(1,n);dot(x1+(x2-x1)*t,y1+(y2-y1)*t,color,th,th)}};
+ const poly=(pts,color)=>{g.fillStyle=color;g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.closePath();g.fill()};
+ // 背景の魔力は身体とは別のレイヤー。全身を隠さないよう端に限定する。
+ if(kind==='fire'){
+  for(let i=0;i<24;i++){const x=16+i*9,y=196-(i%5)*12;poly([[x,y+17],[x+5,y+2],[x+9,y-12-(i%3)*6],[x+15,y+15]],i%3===0?P.shine:i%2?P.base:P.light)}
+ }else if(kind==='water'){
+  for(let i=0;i<36;i++){const x=14+i*6.4,y=205+Math.sin(i*.65)*9;dot(x,y,i%3?P.light:P.shine,3+(i%3),3);if(i%4===0)line(x,y,x+7,y-9,P.base,2)}
+ }else{
+  for(let i=0;i<26;i++){const x=14+(i*41)%228,y=24+(i*73)%194;poly([[x,y],[x+6,y-3],[x+12,y],[x+5,y+5]],i%3?P.light:P.shine)}
+ }
+ // 既存のLv36形態の輪郭・顔・甲羅・爪をそのまま継承する。
+ // 128文字配列の各ドットを256pxに展開し、ピクセル単位でハイライトを追加。
+ const ox=back?1:0;
+ for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+  const ch=src.r[y][x];if(ch==='.')continue;
+  const xx=back?254-x*2:x*2,yy=y*2;
+  const base=src.p[Number(ch)];dot(xx,yy,base,2,2);
+  const seed=(x*29+y*47+x*y*3)%31;
+  if(ch!=='0'&&seed===0)dot(xx+(back?0:1),yy,P.light);
+  else if(ch!=='0'&&seed===7)dot(xx,yy+1,P.dark);
+ }
+ // 256ドットで描き足す、究極進化だけの独自ディテール。
+ if(kind==='fire'){
+  // 既存のヒノガルドに重なる鱗と燃える翼の羽根。
+  for(let wing=0;wing<2;wing++){
+   const cx=wing?162:90,dir=wing?1:-1;
+   for(let i=0;i<9;i++){
+    const x=cx+dir*(i*8),y=95-i*7;
+    poly([[cx,133],[x,y+11],[x+dir*6,y-12],[x+dir*13,y+8]],P.edge);
+    poly([[cx,130],[x,y+10],[x+dir*5,y-8],[x+dir*10,y+7]],i%3===0?P.shine:i%2?P.light:P.base);
+    line(cx,132,x,y+7,P.dark,2);
+   }
   }
- }else if(water){
-  for(let i=0;i<4;i++){let x=44+i*12;path([[x,177],[x-23,149],[x-15,111],[x+12,79],[x+26,96],[x+8,133],[x+32,160]],i%2?base:shadow,edge,2);ln([[x-12,143],[x-5,115],[x+11,93]],shine,3)}
-  for(let i=0;i<8;i++){const a=i*.64;oval(32+i*8,97+Math.sin(a)*17,2+i%3,2+i%2,shine,null)}
+  for(let i=0;i<18;i++){const x=63+i*8,y=137+Math.sin(i*.75)*13;poly([[x,y+6],[x+3,y-4],[x+8,y+5],[x+4,y+10]],i%3?P.light:P.shine)}
+  for(let i=0;i<14;i++){const x=20+i*15,y=35+(i*31)%176;dot(x,y,i%3?P.light:P.shine,2,3)}
+ }else if(kind==='water'){
+  // 元のミズレヴィアの青い甲羅に、六角形の水晶鱗と金縁。
+  for(let row=0;row<5;row++)for(let col=0;col<7;col++){
+   const x=93+col*15+(row%2)*7,y=102+row*13;
+   const pts=[[x,y-6],[x+7,y-3],[x+7,y+4],[x,y+8],[x-7,y+4],[x-7,y-3]];
+   poly(pts,P.edge);poly([[x,y-4],[x+5,y-2],[x+5,y+3],[x,y+6],[x-5,y+3],[x-5,y-2]],(row+col)%3===0?P.light:P.base);
+   line(x-4,y-2,x+1,y-4,P.shine,1);dot(x+5,y+2,'#d4a959',2,2);
+  }
+  for(let i=0;i<9;i++){const x=90+i*15,y=91-Math.sin(i/8*Math.PI)*21;poly([[x-6,y+7],[x,y-14-(i%3)*5],[x+7,y+7]],P.edge);poly([[x-3,y+4],[x,y-10-(i%3)*5],[x+4,y+4]],i%2?P.shine:P.light)}
+  for(let i=0;i<18;i++){const x=21+i*12,y=206+Math.sin(i*.8)*7;dot(x,y,P.shine,3,3);dot(x+3,y+4,P.base,4,2)}
  }else{
-  for(let j=0;j<17;j++){const x=53+j*7,y=124-Math.sin(j*.65)*18;ln([[x,157],[x-5,112],[x-10,78-j%4*6]],gold,5);leaf(x-9,91-j%4*6,-16-j%3*4,-16,j%3?light:base);leaf(x-2,111,-18,2,shadow)}
-  for(let j=0;j<9;j++){const x=64+j*15;leaf(x,89,-10,-23,j%2?shine:light)}
+  // ユグハッパの体を残し、枝角・葉・花を密集させた樹王の姿。
+  for(let side=0;side<2;side++){
+   const root=side?166:83,dir=side?1:-1;
+   line(root,121,root+dir*19,60,P.edge,8);line(root,121,root+dir*19,60,'#987146',4);
+   for(let i=0;i<7;i++){
+    const x=root+dir*(18+i*9),y=62-i*7;
+    line(root+dir*19,65,x,y,'#a97b49',4);
+    poly([[x,y],[x+dir*10,y-12],[x+dir*19,y-7],[x+dir*10,y+7]],P.edge);
+    poly([[x+dir*2,y],[x+dir*10,y-9],[x+dir*16,y-6],[x+dir*10,y+5]],i%2?P.light:P.base);
+   }
+  }
+  for(let i=0;i<48;i++){
+   const x=46+(i*37)%170,y=65+(i*19)%112;
+   if(i%6===0){dot(x-2,y,P.shine,5,5);dot(x+1,y-3,P.shine,3,4);dot(x+1,y+4,P.shine,3,3);dot(x+1,y,'#d5a24e',2,2)}
+   else if(i%3===0)poly([[x,y],[x+5,y-7],[x+11,y-4],[x+6,y+5]],i%2?P.light:P.base);
+  }
  }
- // 主胴と腹部
- oval(139,143,58,47,deep);oval(143,137,53,44,shadow);oval(165,155,27,28,gold,null);
- // 体の装甲は種類別に独立
- if(fire){
-  for(let r=0;r<6;r++)for(let j=0;j<7;j++){let x=98+j*14+(r%2)*6,y=102+r*12;if(((x-140)/56)**2+((y-139)/47)**2>1)continue;path([[x-7,y-2],[x,y-8],[x+8,y-1],[x+4,y+9],[x,y+12],[x-6,y+7]],(r+j)%3===0?shine:(r+j)%2?base:light,edge,1);ln([[x-3,y],[x,y-5],[x+4,y]],gold,1)}
-  for(let j=0;j<9;j++)tri(94+j*12,103-(j%3)*5,-4,-16,shine);
- }else if(water){
-  oval(141,132,49,38,deep);oval(143,129,44,34,base,'#d6ac59',3);
-  for(let r=0;r<5;r++)for(let j=0;j<6;j++){let x=105+j*14+(r%2)*6,y=103+r*12;if(((x-141)/47)**2+((y-131)/36)**2>1)continue;path([[x-8,y],[x,y-8],[x+9,y-2],[x+7,y+9],[x,y+12],[x-8,y+7]],(j+r)%3===0?shine:(j+r)%2?light:shadow,'#bda05d',2);ln([[x-4,y],[x,y-5],[x+4,y-2]],shine,1)}
-  for(let j=0;j<8;j++)tri(103+j*11,102-(j%2)*6,-5,-19,light);
- }else{
-  for(let r=0;r<5;r++)for(let j=0;j<8;j++){let x=91+j*13+(r%2)*5,y=103+r*13;if(((x-141)/56)**2+((y-138)/45)**2>1)continue;leaf(x,y,j%2?13:-13,-14,(j+r)%3===0?shine:(j+r)%2?light:shadow)}
-  for(let j=0;j<16;j++){let x=87+j*7,y=100+(j%3)*11;oval(x,y,3,3,'#fff8d5',null);oval(x+2,y+2,1.5,1.5,'#dca84b',null)}
+ // 背面は顔の反転だけにせず、背骨の鱗を追加して視点差を表す。
+ if(back){
+  for(let i=0;i<14;i++){const x=111+i*3,y=72+i*9;poly([[x-7,y+8],[x,y-8],[x+8,y+8]],P.edge);poly([[x-4,y+5],[x,y-5],[x+5,y+5]],i%3===0?P.shine:P.light)}
  }
- // 長い首と頭。正面では顔、背面では背鱗と後頭部。
- path([[169,143],[174,107],[185,80],[204,69],[221,80],[211,112],[194,153]],deep,edge,3);
- path([[176,136],[182,104],[193,84],[210,81],[207,110],[193,138]],shadow,null);
- for(let j=0;j<7;j++)tri(180+j*6,96-j*4,-5,-17,j%2?shine:light);
- oval(209,81,24,22,shadow);path([[215,88],[230,88],[246,80],[240,101],[222,107],[209,103]],base,edge,3);
- for(let j=0;j<6;j++)tri(183+j*8,71-j%3*4,-7,-19,j%2?light:shine);
- if(back){for(let j=0;j<7;j++)tri(190+j*7,78-j%3*5,-4,-13,shine);path([[226,75],[237,71],[233,89]],deep,edge,1)}
- else{oval(226,85,5,5,edge,null);oval(228,83,2,2,shine,null);ln([[222,101],[238,98]],edge,2);for(let j=0;j<4;j++)tri(220+j*5,102,2,8,shine)}
- // 首の鎧
- for(let j=0;j<7;j++){let x=176+j*4,y=116-j*5;path([[x-5,y],[x,y-5],[x+7,y-1],[x+4,y+7]],j%2?light:base,edge,1)}
- // 手と爪
- path([[181,134],[198,139],[215,161],[207,179],[187,160]],deep,edge,3);path([[188,141],[199,145],[208,163],[201,171]],base,null);for(let j=0;j<3;j++)claw(202+j*6,173-j*2);
- // 種族ごとの仕上げとドット単位の輝き
- if(fire){for(let j=0;j<35;j++){let x=24+(j*47)%207,y=37+(j*29)%173;if(j%4===0)flame(x,y,.16);else spark(x,y,j%3===0?3:2,j%2?light:shine)}for(let j=0;j<5;j++)flame(50+j*31,215,.22)}
- else if(water){for(let j=0;j<31;j++){let x=20+(j*41)%220,y=48+(j*31)%165;oval(x,y,1+j%3,2+j%3,j%2?shine:light,null)}for(let j=0;j<12;j++){let x=29+j*17,y=210+(j%3)*3;path([[x,y],[x-7,y-8],[x+2,y-14],[x+8,y-4]],j%2?light:shine,null)}}
- else{for(let j=0;j<34;j++){let x=28+(j*41)%213,y=40+(j*23)%164;leaf(x,y,(j%2?7:-7),-9,j%3?light:shine)}for(let j=0;j<13;j++)spark(33+j*15,205+(j%4)*3,2,shine)}
- if(!back)g.restore();
  return c;
 }
-
 function drawStarterBack128(sp,size=128){
  const encoded=STARTER_BACK128[sp.n];if(!encoded)return null;
  const c=document.createElement('canvas');c.width=c.height=128;
