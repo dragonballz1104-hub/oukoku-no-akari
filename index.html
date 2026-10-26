@@ -174,6 +174,10 @@ html,body{min-height:100%;}
 #atlasInfo{background:#081521;border:1px solid #76664d;border-radius:5px;padding:10px;color:#f5e9ce}
 #map{image-rendering:pixelated;background:#10291f}
 #world{background:radial-gradient(ellipse at 50% 32%,#294b42,#0b1624 80%)}
+
+/* 16-bit RPG: no interpolation, no blur at any zoom level */
+canvas, #map, #atlasCanvas, #field canvas {image-rendering:pixelated!important;image-rendering:crisp-edges;image-rendering:pixelated!important;filter:none!important}
+#map {width:270px;max-width:100%;height:auto;}
 </style>
 <script>
 window.addEventListener('error',function(e){var x=document.getElementById('gameError');if(x){x.style.display='block';x.textContent='起動エラー: '+(e.message||'不明なエラー');}});
@@ -314,7 +318,7 @@ await say('めのまえが まっくらになった…',1200);party.forEach(m=>m
 async function run(){if(foe.boss){$('#msg').textContent='魔竜からは にげられない!';return}menu([]);if(Math.random()<.7){await say('うまく にげきれた!');goMap()}else{await say('にげられない!');foeTurn()}}
 
 function paintBattleScene(){
- const c=document.createElement('canvas');c.width=480;c.height=320;const g=c.getContext('2d');
+ const c=document.createElement('canvas');c.width=480;c.height=320;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
  const cave=curMap==='cave',volcano=cave||px>=30;
  const sky=g.createLinearGradient(0,0,0,320);
  if(cave){sky.addColorStop(0,'#130b1a');sky.addColorStop(.55,'#5e1d17');sky.addColorStop(1,'#2a1717')}
@@ -467,7 +471,7 @@ const b=hx(C[col]||col);
 for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(ins(x+.5,y+.5)){const l=(x+.5-cx)/rx*-.55+(y+.5-cy)/ry*-.85;buf[y*N+x]=flat?b:tn(b,l>.5?.3:l<-.45?-.35:0)}}
 const t=document.createElement('canvas');t.width=t.height=N;const tx=t.getContext('2d'),im=tx.createImageData(N,N);
 for(let y=0;y<N;y++)for(let x=0;x<N;x++){let p=buf[y*N+x];if(!p&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>x+a>=0&&x+a<N&&y+b>=0&&y+b<N&&buf[(y+b)*N+x+a]))p=[26,26,36];if(p)im.data.set([...p,255],(y*N+x)*4)}
-tx.putImageData(im,0,0);const c=document.createElement('canvas');c.width=c.height=px;const g=c.getContext('2d');g.imageSmoothingEnabled=false;if(flip){g.translate(px,0);g.scale(-1,1)}g.drawImage(t,0,0,px,px);
+tx.putImageData(im,0,0);const c=document.createElement('canvas');c.width=c.height=px;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.imageSmoothingEnabled=false;if(flip){g.translate(px,0);g.scale(-1,1)}g.drawImage(t,0,0,px,px);
 c.style.filter=`drop-shadow(0 0 ${(A.sz||1)>1.2?12:6}px ${C.g})`;return c}
 const MV=(t,a,b)=>[['たいあたり','normal',40],[a,t,50],['ひっかく','normal',35],[b,t,65]];
 SP.push({n:'ピョンタ',t:'normal',hp:42,a:10,d:9,s:14,mv:MV('normal','とびげり','ぜんりょくとっしん')},{n:'コギツネ',t:'fire',hp:40,a:12,d:8,s:12,mv:MV('fire','きつねび','ほのおのしっぽ')},{n:'アザラ',t:'water',hp:52,a:9,d:11,s:7,mv:MV('water','あわのうた','しぶきのたいあたり')},{n:'ミミクロ',t:'grass',hp:44,a:11,d:9,s:11,mv:MV('grass','はっぱのかぜ','もりのさけび')},{n:'ビリハリ',t:'electric',hp:42,a:11,d:11,s:9,mv:MV('electric','ぱちぱちはり','ほうでんはりせんぼん')},{n:'コグマ',t:'normal',hp:56,a:13,d:11,s:6,mv:MV('normal','つめでひっかき','のしかかり')});
@@ -702,6 +706,55 @@ function drawClassicTerrain(c,vx,vy){
   }
  }
  // 滑らかなUIのままピクセル感を優先
+}
+
+
+// 16×16タイル・16色共通パレット（フィールドとキャラの最終表示に適用）
+const RETRO16=['#101820','#263d35','#365b37','#4d8a43','#78b84f','#b6d96a',
+ '#1e477a','#3477bc','#65b5e8','#e5d9b0','#a99066','#70533e',
+ '#b64f45','#e7a34b','#eee9d8','#8152a3'];
+const RETRO_RGB=RETRO16.map(h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+const retroLow=document.createElement('canvas');retroLow.width=retroLow.height=9*16;
+const retroCtx=retroLow.getContext('2d',{willReadFrequently:true});retroCtx.imageSmoothingEnabled=false;
+function retroFinishMap(){
+ const canvas=document.getElementById('map'),ctx=canvas.getContext('2d');
+ ctx.imageSmoothingEnabled=false;retroCtx.imageSmoothingEnabled=false;
+ retroCtx.clearRect(0,0,144,144);
+ // 1地形タイル=16×16論理ピクセル。拡大は必ず最近傍補間。
+ retroCtx.drawImage(canvas,0,0,canvas.width,canvas.height,0,0,144,144);
+ const im=retroCtx.getImageData(0,0,144,144),d=im.data;
+ const cache=new Map();
+ for(let i=0;i<d.length;i+=4){
+  const key=(d[i]>>3)<<10|(d[i+1]>>3)<<5|(d[i+2]>>3);
+  let n=cache.get(key);
+  if(n===undefined){let best=Infinity;n=0;
+   for(let j=0;j<16;j++){const c=RETRO_RGB[j];const dr=d[i]-c[0],dg=d[i+1]-c[1],db=d[i+2]-c[2];const dist=dr*dr*.3+dg*dg*.59+db*db*.11;
+    if(dist<best){best=dist;n=j}}
+   cache.set(key,n);
+  }
+  const c=RETRO_RGB[n];d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
+ }
+ retroCtx.putImageData(im,0,0);
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.drawImage(retroLow,0,0,144,144,0,0,canvas.width,canvas.height);
+}
+
+
+// 各キャラクターの原画は16行×16列の配列。1文字＝1ドット。
+const CHARACTER_16 = {
+  hero_front: ["................", ".....KKKKKK.....", "....KHHHHHHK....", "....KHLLLHHK....", "....KSSSSSSK....", "....KSESSESK....", "....KSSSSSSK....", ".....KBBBBK.....", "....KABBBBAK....", "....KABBBBAK....", ".....KBBBBK.....", ".....KBBBK......", ".....KBBBK......", ".....K..K.......", "....KK..KK......", "................"], hero_back: ["................", ".....KKKKKK.....", "....KHHHHHHK....", "....KHHHHHHK....", "....KHHHHHHK....", "....KHHHHHHK....", "....KHHHHHHK....", ".....KBBBBK.....", "....KABBBBAK....", "....KABBBBAK....", ".....KBBBBK.....", ".....KBBBK......", ".....KBBBK......", ".....K..K.......", "....KK..KK......", "................"], hero_side: ["................", "......KKKK......", ".....KHHHHK.....", ".....KHHHHHK....", ".....KSSSSK.....", ".....KSESSK.....", ".....KSSSSK.....", "......KBBBK.....", ".....KABBBAK....", ".....KABBBAK....", "......KBBBK.....", "......KBBK......", "......KBBK......", "......K.K.......", ".....KK.KK......", "................"],
+  elder: ["................", ".....KKKKKK.....", "....KHHHHHHK....", "....KHHHHHHK....", "....KSSSSSSK....", "....KSESSESK....", "....KSSSSSSK....", ".....KCCCCK.....", "....KCCCCCCK....", "....KCCCCCCK....", ".....KCCCCK.....", ".....KCCCCK.....", ".....KCCCCK.....", ".....K..K.......", "....KK..KK......", "................"], forest_keeper: ["................", ".....KKKKKK.....", "....KHHHHHHK....", "....KHHHHHHK....", "....KSSSSSSK....", "....KSESSESK....", "....KSSSSSSK....", ".....KCCCCK.....", "....KCCCCCCK....", "....KCCCCCCK....", ".....KCCCCK.....", ".....KCCCCK.....", ".....KCCCCK.....", ".....K..K.......", "....KK..KK......", "................"], villager: ["................", ".....KKKKKK.....", "....KHHHHHHK....", "....KHHHHHHK....", "....KSSSSSSK....", "....KSESSESK....", "....KSSSSSSK....", ".....KCCCCK.....", "....KCCCCCCK....", "....KCCCCCCK....", ".....KCCCCK.....", ".....KCCCCK.....", ".....KCCCCK.....", ".....K..K.......", "....KK..KK......", "................"]
+};
+const PIXEL16_COLORS={'.':null,K:'#20242c',H:'#74512f',L:'#cda365',S:'#edbd93',E:'#20242c',B:'#4168ba',A:'#bdc6d0',C:'#547b58'};
+function paintCharacter16(ctx,rows,x,y,w=30,h=30,palette=PIXEL16_COLORS,mirror=false){
+ const sx=w/16,sy=h/16;ctx.save();ctx.imageSmoothingEnabled=false;
+ for(let yy=0;yy<16;yy++)for(let xx=0;xx<16;xx++){const c=rows[yy]?.[mirror?15-xx:xx]||'.';if(c==='.'||!palette[c])continue;ctx.fillStyle=palette[c];ctx.fillRect(Math.round(x+xx*sx),Math.round(y+yy*sy),Math.ceil(sx),Math.ceil(sy))}
+ ctx.restore();
+}
+function paintNPC16(ctx,n,x,y){
+ const type=n.m==='forest'?'forest_keeper':n.g?'elder':'villager';
+ const colors={...PIXEL16_COLORS,C:n.c|| (type==='elder'?'#b7b2c8':'#54865b'),H:n.h||'#74512f'};
+ paintCharacter16(ctx,CHARACTER_16[type],x,y,30,30,colors);
 }
 
 function drawMap(){const x=$('#map').getContext('2d'),vx=Math.min(Math.max(px-4,0),MAP[0].length-V),vy=Math.min(Math.max(py-4,0),MAP.length-V);
@@ -942,15 +995,15 @@ if(curMap==='altar'&&!shrineClear){
   x.restore();
  }
 }
-NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;if(curMap==='altar'&&n.b===2&&!shrineClear)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
+NPCS.forEach(n=>{if((n.m||'world')!==curMap)return;if(curMap==='altar'&&n.b===2&&!shrineClear)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;paintNPC16(x,n,i*T,j*T);});
 const ox=(px-vx)*T,oy=(py-vy)*T;x.fillStyle='rgba(0,0,0,.25)';x.fillRect(ox+4,oy+28,22,3);const by=oy-(px+py)%2;
 // 主人公：進行方向ごとに前・後ろ・左右の専用ドット絵を描く
 const hx=ox-1,hy=by-3;
-if(face[1]===1){x.drawImage(spr('P:hero'),hx,hy)}
-else if(face[1]===-1){drawHeroFacing(x,hx,hy,'up')}
-else{drawHeroFacing(x,hx,hy,face[0]===1?'right':'left')}
+const facing=face[1]===1?'hero_front':face[1]===-1?'hero_back':'hero_side';
+paintCharacter16(x,CHARACTER_16[facing],hx,hy,30,30,PIXEL16_COLORS,face[0]===-1);
+retroFinishMap();
 }
-// 32pxキャラクターの後ろ姿・横姿（左右反転）
+// 16pxキャラクターの後ろ姿・横姿（左右反転）
 function drawHeroFacing(ctx,x,y,dir){
  ctx.save();ctx.translate(x,y);
  if(dir==='left'){ctx.translate(32,0);ctx.scale(-1,1)}
