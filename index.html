@@ -724,62 +724,67 @@ const MONSTER_PIXELS_16 = {"アザラ":["................","................",".
 // オリジナル御三家の専用32x32ピクセル原画。64x64へ最近傍拡大。
 // 参考の「炎の小型爬虫類／水の小型亀／草の四足獣」という大枠のみ採用し、
 // 顔、頭部の形、装飾、甲羅、葉の造形は独自デザイン。
+// 御三家と進化系：64px原寸のオリジナルピクセル原画。目は小さく、輪郭は1〜2px。
 function originalStarterSprite(name){
- const variants={
-  'ヒノコン':'fire','ミズクル':'water','ハッパ':'grass',
-  'コハクヒノコン':'fire','シラユキミズクル':'water','モモハナハッパ':'grass'
+ const families={
+  'ヒノコン':['fire',0],'ヒノガルド':['fire',1],'ムスペルガ':['fire',2],
+  'ミズクル':['water',0],'ミズレヴィア':['water',1],'ヨルムレヴィア':['water',2],
+  'ハッパ':['grass',0],'ユグハッパ':['grass',1],'ユグドラガマ':['grass',2],
+  'コハクヒノコン':['fire',0],'シラユキミズクル':['water',0],'モモハナハッパ':['grass',0]
  };
- const type=variants[name];if(!type)return null;
- const c=document.createElement('canvas');c.width=c.height=32;
+ const spec=families[name];if(!spec)return null;
+ const [kind,stage]=spec;
+ const c=document.createElement('canvas');c.width=c.height=64;
  const g=c.getContext('2d');g.imageSmoothingEnabled=false;
- const ink='#101521';
- function rect(x,y,w,h,color){g.fillStyle=color;g.fillRect(x,y,w,h)}
- function ellipse(x,y,rx,ry,color){g.fillStyle=color;for(let yy=Math.floor(y-ry);yy<=Math.ceil(y+ry);yy++)for(let xx=Math.floor(x-rx);xx<=Math.ceil(x+rx);xx++)if(((xx-x)/rx)**2+((yy-y)/ry)**2<=1)g.fillRect(xx,yy,1,1)}
- function shape(x,y,rx,ry,fill,edge=ink){ellipse(x,y,rx+1.1,ry+1.1,edge);ellipse(x,y,rx,ry,fill)}
- function line(points,color,width=1){g.strokeStyle=color;g.lineWidth=width;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x+.5,y+.5):g.moveTo(x+.5,y+.5));g.stroke()}
- if(type==='fire'){
-  // ヒノコン: ひし形の耳、琥珀の腹、灯籠状の尾火を持つ火トカゲ。
-  shape(22,21,7,3,'#b83d24');shape(24,19,5,2,'#ef7834');
-  shape(27,16,2,3,'#e84b20');shape(27,14,2,2,'#ffd44e');rect(27,13,1,2,'#fff2b0');
-  shape(12,20,7,8,'#e96c32');shape(11,22,4,5,'#ffc66b');
-  shape(7,28,3,2,'#b83d24');shape(17,28,3,2,'#b83d24');
-  shape(5,20,2,4,'#e96c32');shape(20,19,2,4,'#e96c32');
-  shape(12,11,8,8,'#f07835');shape(8,5,2,3,'#db5527');shape(17,5,2,3,'#db5527');
-  ellipse(9,8,4,2,'#ffa85a');ellipse(10,13,6,3,'#ff9d50');
-  shape(8,11,2,3,'#fff6d9');rect(8,11,2,3,'#174d63');rect(8,11,1,1,'#ffffff');
-  shape(17,11,2,3,'#fff6d9');rect(17,11,2,3,'#174d63');rect(17,11,1,1,'#ffffff');
-  line([[10,17],[13,18],[16,17]],'#742c29');rect(7,16,2,1,'#e24b2b');
- }else if(type==='water'){
-  // ミズクル: 六角の渦甲羅、波形の頭冠、幅広の水かき。
-  shape(20,19,9,8,'#2c719a');shape(21,18,7,6,'#75b5bb');
-  line([[17,16],[21,12],[26,16],[25,22],[20,24],[16,20]],'#255a75',2);
-  line([[20,15],[23,18],[20,21],[18,19]],'#e6cf8b',2);
-  shape(12,26,4,2,'#5cb9c8');shape(25,26,4,2,'#5cb9c8');
-  shape(10,13,8,8,'#69c7cf');ellipse(7,9,5,3,'#a1e2e2');
-  shape(12,5,3,2,'#65bfcd');shape(16,6,2,2,'#65bfcd');
-  shape(8,12,2,3,'#f6f4e9');rect(8,12,2,3,'#193e5b');rect(8,12,1,1,'#ffffff');
-  shape(15,12,2,3,'#f6f4e9');rect(15,12,2,3,'#193e5b');rect(15,12,1,1,'#ffffff');
-  line([[8,18],[11,19],[14,18]],'#2b6379');rect(5,17,2,1,'#eb9b78');
-  shape(5,22,3,2,'#69c7cf');
+ const K='#151c27';
+ const palette={fire:['#a83e26','#ec7334','#ffb65e','#ffe39b','#b92821'],water:['#255a79','#65b7cb','#a5e4df','#f2d38b','#327eae'],grass:['#276c63','#4da89a','#83d2b5','#8ac84b','#3e8b45']}[kind];
+ const [dark,base,light,accent,deep]=palette;
+ function dot(x,y,w,h,color){g.fillStyle=color;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+ function oval(x,y,rx,ry,col){g.fillStyle=col;for(let yy=Math.floor(y-ry);yy<=Math.ceil(y+ry);yy++)for(let xx=Math.floor(x-rx);xx<=Math.ceil(x+rx);xx++)if(((xx-x)/rx)**2+((yy-y)/ry)**2<=1)g.fillRect(xx,yy,1,1)}
+ function blob(x,y,rx,ry,color){oval(x,y,rx+1.5,ry+1.5,K);oval(x,y,rx,ry,color);oval(x-rx*.28,y-ry*.38,Math.max(2,rx*.38),Math.max(1,ry*.18),light)}
+ function poly(points,color){g.fillStyle=K;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();g.fillStyle=color;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()}
+ function eye(x,y,iris){dot(x-1,y-1,5,6,K);dot(x,y,3,4,'#fff9e7');dot(x+1,y+1,2,3,iris);dot(x+1,y+1,1,1,'#ffffff')}
+ function feet(y){blob(19,y,6,3,dark);blob(42,y,6,3,dark);dot(16,y+1,2,1,light);dot(39,y+1,2,1,light)}
+ if(kind==='fire'){
+  // 小さな琥珀目、灯籠の炎、耳のような角。進化で翼と装甲が成長。
+  poly([[41,40],[49,34],[54,25],[57,23],[55,37],[48,47],[40,47]],dark);
+  blob(55,22,5+stage,8+stage,deep);blob(55,20,3+stage,6+stage,'#ffbd35');dot(54,14-stage,2,5,'#fff3ad');
+  if(stage===2){poly([[34,25],[48,7],[54,14],[50,32]],deep);poly([[34,28],[51,16],[48,31]],dark);poly([[23,24],[14,8],[9,15],[16,32]],deep)}
+  feet(55);blob(31,41,14+stage*2,14+stage,base);oval(30,44,8+stage,10,accent);
+  blob(19,39,4,9,base);blob(46,38,4+stage,9,base);
+  if(stage>0){for(let i=0;i<3+stage;i++)poly([[38+i*3,28+i*3],[40+i*3,23+i*3],[43+i*3,30+i*3]],accent)}
+  blob(28,21,14+stage,13+stage,base);poly([[17,14],[18,5],[25,12]],dark);poly([[35,12],[40,4],[41,16]],dark);
+  oval(23,17,7,3,light);oval(28,27,10,4,light);
+  eye(23,21,'#235a78');eye(35,21,'#235a78');dot(29,29,7,1,K);dot(31,30,4,1,'#ffe7b0');
+  if(stage===2){poly([[17,10],[22,0],[28,11]],accent);poly([[34,10],[41,1],[43,14]],accent)}
+ }else if(kind==='water'){
+  // 六角甲羅と渦紋、水かき。進化で甲羅が大型化し水流のヒレが伸びる。
+  if(stage===2){poly([[45,30],[56,17],[60,23],[53,41]],deep);poly([[43,18],[51,6],[55,14],[52,28]],light)}
+  blob(40,36,17+stage*2,15+stage,deep);blob(40,34,14+stage*2,12+stage,base);
+  poly([[31,27],[42,21],[52,28],[52,41],[41,47],[30,39]],accent);
+  poly([[35,30],[43,26],[49,31],[47,39],[39,43],[33,38]],dark);
+  poly([[38,32],[43,29],[46,34],[42,39],[37,37]],light);
+  feet(54);blob(18,43,7,5,base);blob(47,47,7,5,base);
+  if(stage>0){poly([[47,21],[53,9],[58,16],[56,28]],light);poly([[32,22],[35,13],[40,21]],deep)}
+  blob(23,23,15+stage,14+stage,base);oval(19,17,8,4,light);
+  poly([[19,10],[24,5],[28,11],[33,8],[34,15]],base);
+  eye(19,24,'#263f53');eye(31,24,'#263f53');dot(23,32,8,1,K);dot(25,33,4,1,'#efc29e');
+  dot(13,29,2,2,deep);dot(37,28,2,2,deep);
  }else{
-  // ハッパ: 青緑の四足獣、三枚葉の背びれと額の若芽が特徴。
-  shape(19,20,9,6,'#368d85');shape(25,25,4,3,'#2b746e');
-  shape(12,26,4,3,'#3c9c8c');shape(25,27,3,2,'#3c9c8c');
-  shape(18,12,3,7,'#5cbf52');shape(23,11,4,6,'#83d95b');shape(27,15,3,5,'#4da84d');
-  line([[18,17],[22,13],[25,17]],'#2b7040');
-  shape(11,15,9,7,'#4aa99b');ellipse(8,12,6,3,'#6ac9ae');
-  shape(13,8,2,4,'#55b966');shape(15,6,3,2,'#92df70');
-  shape(8,14,2,3,'#fff0e8');rect(8,14,2,3,'#9e3e5a');rect(8,14,1,1,'#ffffff');
-  shape(16,14,2,3,'#fff0e8');rect(16,14,2,3,'#9e3e5a');rect(16,14,1,1,'#ffffff');
-  line([[9,20],[12,21],[15,20]],'#27645e');rect(5,18,2,1,'#df7585');
+  // 草属性は四足、額の芽、背中の三枚葉。進化で花冠と葉の装甲が成長。
+  blob(38,38,18+stage*2,12+stage,base);feet(53);
+  poly([[31,29],[27,13],[34,8],[40,28]],deep);poly([[36,27],[42,6],[51,13],[47,29]],accent);poly([[42,30],[56,17],[59,27],[50,37]],deep);
+  if(stage===2){for(let i=0;i<5;i++){let xx=29+i*6;blob(xx,14+(i%2)*3,7,6,i%2?'#c95e78':'#ec8291')}blob(42,17,5,5,'#ffd16a')}
+  else if(stage===1){blob(41,20,8,9,accent);poly([[40,19],[34,7],[45,14]],light)}
+  blob(23,32,15+stage,13+stage,base);oval(18,26,9,4,light);
+  poly([[25,20],[28,8],[32,17]],accent);poly([[27,16],[34,10],[34,21]],deep);
+  eye(18,32,'#803f5d');eye(31,32,'#803f5d');dot(21,40,8,1,K);dot(23,41,4,1,'#d87883');
+  dot(12,36,2,2,dark);dot(37,37,2,2,dark);
  }
  if(name==='コハクヒノコン'||name==='シラユキミズクル'||name==='モモハナハッパ'){
-  // レア個体は通常種と区別する額の星印を追加。
-  rect(12,7,1,3,'#fff1a3');rect(11,8,3,1,'#fff1a3');
+  dot(27,9,2,5,'#fff0a2');dot(25,11,6,2,'#fff0a2');
  }
- const raw=document.createElement('canvas');raw.width=raw.height=64;
- const out=raw.getContext('2d');out.imageSmoothingEnabled=false;out.drawImage(c,0,0,64,64);
- return raw;
+ return c;
 }
 const MONSTER_BATTLE64_CACHE=new Map();
 function monsterBattle64(sp){
