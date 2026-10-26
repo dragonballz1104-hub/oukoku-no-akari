@@ -642,6 +642,68 @@ function drawFinalEnvironment(c,vx,vy){
  }
  c.restore();
 }
+
+// 参考資料の16-bit見下ろし型RPGに寄せた地形仕上げ。
+// ゲームの当たり判定・NPC・セーブには触れず、地形描画だけを差し替える。
+function drawClassicTerrain(c,vx,vy){
+ if(!['world','lake','forest'].includes(curMap))return;
+ const rr=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),w,h)};
+ const rand=(x,y,k)=>tileRand(x,y,k+205);
+ const water=t=>t==='~'||t==='W';
+ const green=t=>'.gpEF'.includes(t||'!');
+ const shade=['#277a32','#2c8735','#31923b','#379a40'];
+ for(let j=0;j<V;j++)for(let i=0;i<V;i++){
+  const wx=vx+i,wy=vy+j,t=MAP[wy]?.[wx],X=i*T,Y=j*T;
+  if(water(t)){
+   rr(X,Y,30,30,'#0757a2');
+   for(let k=0;k<10;k++){
+    let xx=Math.floor(rand(wx,wy,k)*28), yy=Math.floor(rand(wx,wy,k+18)*28);
+    rr(X+xx,Y+yy,2+k%4,1,k%3===0?'#2479be':'#1268ae');
+   }
+   // 水際は淡い波線と砂色の縁取り
+   const sides=[[0,-1],[1,0],[0,1],[-1,0]];
+   sides.forEach(([dx,dy],a)=>{
+    let n=MAP[wy+dy]?.[wx+dx];if(!n||water(n))return;
+    if(a===0){rr(X,Y,30,3,'#e4c58a');rr(X,Y+3,30,2,'#78cbe4');rr(X+4,Y+6,13,1,'#c8f2f1')}
+    if(a===1){rr(X+27,Y,3,30,'#e4c58a');rr(X+25,Y,2,30,'#78cbe4')}
+    if(a===2){rr(X,Y+27,30,3,'#e4c58a');rr(X,Y+25,30,2,'#78cbe4');rr(X+9,Y+22,15,1,'#c8f2f1')}
+    if(a===3){rr(X,Y,3,30,'#e4c58a');rr(X+3,Y,2,30,'#78cbe4')}
+   });
+   if(rand(wx,wy,92)>.88){rr(X+12,Y+12,12,3,'#53b68a');rr(X+15,Y+9,5,5,'#78d39d');rr(X+20,Y+15,2,2,'#a8edba')}
+  }else if(t==='M'){
+   rr(X,Y,30,30,'#397d35');rr(X+1,Y+23,28,7,'#376c34');
+   rr(X+2,Y+21,26,4,'#4c5549');rr(X+5,Y+15,20,9,'#59675f');
+   rr(X+8,Y+9,16,12,'#89948b');rr(X+12,Y+3,8,12,'#d7dcd4');
+   rr(X+12,Y+3,3,10,'#f2f2e7');rr(X+17,Y+9,3,12,'#4e5b58');
+   rr(X+7,Y+23,17,3,'#343f3b');rr(X+4,Y+26,22,2,'#263b31');
+  }else if(t==='T'&&(curMap==='world'||curMap==='forest')){
+   rr(X,Y,30,30,'#226c33');rr(X+12,Y+19,7,11,'#60412d');
+   const canopy=['#104c27','#14652d','#197536','#26843a','#3b9745'];
+   for(let k=0;k<12;k++){
+    let a=1+Math.floor(rand(wx,wy,k)*21),b=1+Math.floor(rand(wx,wy,k+27)*19);
+    rr(X+a,Y+b,8,5,canopy[(k+wx+wy+50)%5]);
+   }
+   rr(X+5,Y+7,8,2,'#51a34a');rr(X+17,Y+4,5,2,'#61ad52');
+   rr(X+7,Y+22,15,3,'#124823');
+  }else if(green(t)&&t!=='f'&&t!=='p'&&t!=='E'){
+   rr(X,Y,30,30,shade[Math.floor(rand(wx,wy,4)*4)]);
+   for(let k=0;k<12;k++){
+    let a=Math.floor(rand(wx,wy,k+32)*28),b=Math.floor(rand(wx,wy,k+57)*28);
+    rr(X+a,Y+b,2+k%2,1,k%3===0?'#51a94b':'#23762f');
+   }
+   if(rand(wx,wy,88)>.65){rr(X+11,Y+14,2,2,'#f1e5a1');rr(X+13,Y+15,2,2,'#d1a0bb')}
+  }else if(t==='p'||t==='f'){
+   rr(X,Y,30,30,'#bcb09a');
+   for(let k=0;k<5;k++){
+    let yy=k*6,off=(wy+k)%2?7:0;
+    rr(X,Y+yy,30,1,'#8a8578');rr(X+off+8,Y+yy+1,1,5,'#8a8578');
+    rr(X+off+2,Y+yy+2,7,1,'#e4d8b7');
+   }
+  }
+ }
+ // 滑らかなUIのままピクセル感を優先
+}
+
 function drawMap(){const x=$('#map').getContext('2d'),vx=Math.min(Math.max(px-4,0),MAP[0].length-V),vy=Math.min(Math.max(py-4,0),MAP.length-V);
 for(let j=0;j<V;j++)for(let i=0;i<V;i++){let ch=MAP[vy+j][vx+i];const X=i*T,Y=j*T;x.fillStyle=ch=='D'&&keys?CL.p:CL[ch];x.fillRect(X,Y,T,T);paintTile(x,ch,X,Y,vx+i,vy+j);deco(x,ch,X,Y,(vx+i)*7+(vy+j)*13+(vx+i)*(vy+j));
 if(['roots','runes','altar'].includes(curMap)){x.fillStyle=ch==='T'?'rgba(37,76,52,.24)':ch==='S'?'rgba(195,172,112,.24)':'rgba(66,87,70,.15)';x.fillRect(X,Y,T,T);x.strokeStyle=ch==='T'?'#547c52':'#8b9e70';x.strokeRect(X+2,Y+2,26,26);if(ch==='T'){x.fillStyle='#80603a';x.fillRect(X+12,Y+13,6,17);x.fillStyle='#36794d';x.fillRect(X+4,Y+2,22,17)}if(curMap==='altar'&&ch==='S'){x.fillStyle='rgba(238,219,130,.35)';x.fillRect(X+7,Y+2,16,26)}}
@@ -831,9 +893,56 @@ drawAreaAtmosphere(x,vx,vy);
 drawTownDetails(x,vx,vy);
 drawFinalEnvironment(x,vx,vy);
 drawForestDetails(x,vx,vy);
+drawClassicTerrain(x,vx,vy);
+// ダンジョン入口：石造りの門、光る矢印、エリア名の標識を表示
+(function(){
+ const gates={world:[[10,20,'古代樹の森','#69f5a2'],[25,8,'月鏡湖','#72dcff'],[34,6,'紅蓮岳','#ffb064']],forest:[[10,1,'世界樹の神殿','#a8ffae']],roots:[[9,1,'精霊の回廊','#b4f3b1']],runes:[[9,1,'生命の祭壇','#ffe8a0']]};
+ for(const [gx,gy,name,color] of (gates[curMap]||[])){
+  const xx=(gx-vx)*T,yy=(gy-vy)*T;
+  if(xx < -T || yy < -T || xx > V*T || yy > V*T)continue;
+  x.save();
+  x.fillStyle='#292b34';x.fillRect(xx+1,yy+6,30,24);
+  x.fillStyle='#92958b';x.fillRect(xx+1,yy+4,6,26);x.fillRect(xx+25,yy+4,6,26);x.fillRect(xx+1,yy+3,30,6);
+  x.fillStyle='#d4d1b4';x.fillRect(xx+3,yy+5,3,21);x.fillRect(xx+27,yy+5,2,21);x.fillRect(xx+5,yy+4,23,2);
+  x.fillStyle='#0c1822';x.fillRect(xx+9,yy+12,14,18);
+  x.fillStyle=color;x.globalAlpha=.72+.23*Math.sin(Date.now()/350);x.fillRect(xx+12,yy+16,8,11);x.globalAlpha=1;
+  x.fillStyle='#fff7c6';x.fillRect(xx+14,yy-3,4,6);x.fillRect(xx+11,yy,10,2);
+  // 入口が画面内にある場合のみ看板を添える
+  if(xx>=0&&xx<V*T&&yy>=12&&yy<V*T-32){
+   x.font='bold 9px sans-serif';const w=Math.min(100,x.measureText(name).width+10);
+   const bx=Math.max(1,Math.min(V*T-w-1,xx+16-w/2));
+   x.fillStyle='rgba(10,24,24,.88)';x.fillRect(bx,yy-15,w,13);
+   x.strokeStyle=color;x.strokeRect(bx+.5,yy-14.5,w-1,12);
+   x.fillStyle='#fff';x.fillText(name,bx+5,yy-5);
+  }
+  x.restore();
+ }
+})();
 if(curMap==='runes')SHRINE_SWITCHES.forEach((q,i)=>{const ii=q.x-vx,jj=q.y-vy;if(ii>=0&&jj>=0&&ii<V&&jj<V){x.fillStyle=shrineActivated.includes(i)?'#e9f7a0':'#65e3b3';x.fillRect(ii*T+9,jj*T+6,12,19);x.fillStyle='#173d32';x.fillRect(ii*T+13,jj*T+9,4,10)}});
-if(curMap==='altar'&&!shrineClear){const i=9-vx,j=6-vy;if(i>=0&&j>=0&&i<V&&j<V){x.fillStyle='#d5b869';x.fillRect(i*T+4,j*T+23,23,6);x.drawImage(spr('ユグハッパ'),i*T-2,j*T-10,34,40)}}
-NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
+if(curMap==='altar'&&!shrineClear){
+ const i=9-vx,j=6-vy;
+ if(i>=-1&&j>=-1&&i<V+1&&j<V+1){
+  const X=i*T,Y=j*T;x.save();
+  // 闇に侵された翠樹王：鹿角・大樹の身体・紫の侵食紋
+  x.fillStyle='rgba(132,52,190,.24)';x.beginPath();x.ellipse(X+16,Y+14,29,30,0,0,Math.PI*2);x.fill();
+  x.fillStyle='#342c31';x.fillRect(X+5,Y+21,23,11);
+  x.fillStyle='#386b40';x.fillRect(X+5,Y+15,22,13);x.fillRect(X+8,Y+8,17,16);
+  x.fillStyle='#64b46d';x.fillRect(X+9,Y+10,13,10);x.fillRect(X+7,Y+17,19,5);
+  x.fillStyle='#a8e77b';x.fillRect(X+11,Y+13,3,3);
+  // 枝角
+  x.fillStyle='#b8d18b';x.fillRect(X+8,Y-8,3,22);x.fillRect(X+22,Y-8,3,22);
+  x.fillRect(X+3,Y-5,8,3);x.fillRect(X+22,Y-5,9,3);
+  x.fillRect(X+5,Y-12,3,10);x.fillRect(X+27,Y-12,3,10);
+  x.fillRect(X+12,Y-3,3,10);x.fillRect(X+19,Y-3,3,10);
+  // 紫の闇と光る瞳
+  x.fillStyle='#8036aa';x.fillRect(X+8,Y+17,6,4);x.fillRect(X+20,Y+21,5,5);
+  x.fillStyle='#f17cff';x.fillRect(X+12,Y+14,3,3);x.fillRect(X+20,Y+14,3,3);
+  x.fillStyle='#f6e5a4';x.fillRect(X+16,Y+18,2,3);
+  x.fillStyle='#ffe5a3';x.font='bold 9px sans-serif';x.fillText('BOSS',X+2,Y-17);
+  x.restore();
+ }
+}
+NPCS.forEach(n=>{if((n.m||'world')!=curMap)return;if(curMap==='altar'&&n.b===2&&!shrineClear)return;const i=n.x-vx,j=n.y-vy;if(i<0||j<0||i>=V||j>=V)return;const X=i*T,Y=j*T;if(n.sp){x.drawImage(spr(n.sp.n),X-1,Y-3);return}if(n.g){n.g.forEach((r,jj)=>[...(r+[...r].reverse().join(''))].forEach((ch,ii)=>{if(ch=='.')return;x.fillStyle=n.p[ch];x.fillRect(X+1+ii*2,Y+jj*2,2,2)}));if(n.st){x.fillStyle='#8a6a3a';x.fillRect(X+27,Y+4,2,25);x.fillStyle=n.st;x.fillRect(X+26,Y+1,4,4)}return}x.fillStyle='#1a1a24';x.fillRect(X+6,Y+3,18,26);x.fillStyle=n.c||'#7a4aa0';x.fillRect(X+8,Y+13,14,14);x.fillStyle='#f0c8a0';x.fillRect(X+10,Y+7,10,7);x.fillStyle=n.h||'#eee';x.fillRect(X+9,Y+12,12,6);x.fillRect(X+9,Y+4,12,4)});
 const ox=(px-vx)*T,oy=(py-vy)*T;x.fillStyle='rgba(0,0,0,.25)';x.fillRect(ox+4,oy+28,22,3);const by=oy-(px+py)%2;
 // 主人公：進行方向ごとに前・後ろ・左右の専用ドット絵を描く
 const hx=ox-1,hy=by-3;
@@ -1049,7 +1158,7 @@ NPCS.push({x:2,y:8,g:ELD,p:{...ELDP,w:'#6a4a2a',p:'#5a8a3a'},t:()=>['農夫ハ�
 NPCS.push({x:11,y:6,g:MER,p:{...MERP,h:'#3a7ad0',H:'#2a5a9a',m:'#f0c8a0',o:'#e8d060',B:'#e8d060'},t:()=>['少年トム:「モンスターと なかまになるの、すごいね! ぼくも そだててみたい!」','「くさむらは 広間の まわりが よわい モンスターだよ。」']});
 NPCS.push({x:1,y:6,g:ELD,p:{...ELDP,w:'#d8d8d8',p:'#c06a8a'},t:()=>['おばあさん:「あんたは この村の 子じゃ。ヨルドが 大切に そだてた 子じゃよ。」','「旅に でるなら、ヨルドの 家に よっていきなされ。」']});
 NPCS.push({x:8,y:6,s:1,g:MER,p:MERP,t:()=>["商人ブラギ:「いらっしゃい! 旅には 備えが かんじんだよ。」"]});
-NPCS.push({x:9,y:6,m:'altar',b:2,sp:SHRINE_BOSS,t:()=>['翠樹王ヴェルディオン:「灯を継ぐ者よ。命を守る覚悟を示せ。」','大樹の枝角が金色に輝き、守護獣が立ち上がった！']});
+NPCS.push({x:9,y:6,m:'altar',b:2,sp:SHRINE_BOSS,t:()=>['翠樹王ヴェルディオン:「……近づくな……闇が、私を……！」','紫の闇が枝角を覆っている。主人公のルーンが激しく共鳴した！']});
 NPCS.push({x:17,y:2,m:'cave',b:1,sp:BOSS,t:()=>["ほのおの祭壇を 魔竜ゴルヴァザークが うばっている!","魔竜ゴルヴァザーク:「ククク…よくぞ ここまで きたな。灯は わしのものだ。ほのおに のまれて きえるがいい!」"]});
 const HM={'4,3':'P:elder','27,9':'P:rolf','8,6':'P:merchant','9,7':'P:girl','2,8':'P:farmer','11,6':'P:boy','1,6':'P:granny'};NPCS.forEach(n=>{const k=HM[n.x+','+n.y];if(k)n.sp={n:k}});
 const GOODS=[["きずぐすり",25,()=>pot++]];
